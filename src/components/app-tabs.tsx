@@ -5,7 +5,7 @@ import { useColorScheme } from 'react-native';
 import { Colors } from '@/constants/theme';
 
 const tabs = [
-  { name: 'index', title: 'Schedule', icon: require('@/assets/images/tabIcons/CalendarIcon.svg') },
+  { name: 'schedule', title: 'Schedule', icon: require('@/assets/images/tabIcons/CalendarIcon.svg') },
   { name: 'jobs', title: 'Jobs', icon: require('@/assets/images/tabIcons/SuitcaseIcon.svg') },
   { name: 'team', title: 'Team', icon: require('@/assets/images/tabIcons/TeamIcon.svg') },
   { name: 'more', title: 'More', icon: require('@/assets/images/tabIcons/DotsThreeIcon.svg') },
