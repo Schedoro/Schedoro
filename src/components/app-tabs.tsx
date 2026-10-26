@@ -1,32 +1,47 @@
-import { NativeTabs } from 'expo-router/native-tabs';
+import { Image } from 'expo-image';
+import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 
+const tabs = [
+  { name: 'index', title: 'Schedule', icon: require('@/assets/images/tabIcons/CalendarIcon.svg') },
+  { name: 'jobs', title: 'Jobs', icon: require('@/assets/images/tabIcons/SuitcaseIcon.svg') },
+  { name: 'team', title: 'Team', icon: require('@/assets/images/tabIcons/TeamIcon.svg') },
+  { name: 'more', title: 'More', icon: require('@/assets/images/tabIcons/DotsThreeIcon.svg') },
+];
+
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme ?? 'light'];
+  const colors = Colors[useColorScheme() ?? 'light'];
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: '#5E5EFD',
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: { backgroundColor: colors.background },
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
+        sceneStyle: { backgroundColor: colors.background },
+        tabBarHideOnKeyboard: true,
+      }}>
+      {tabs.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title,
+            headerShown: name !== 'more',
+            tabBarIcon: ({ color, size }) => (
+              <Image
+                source={icon}
+                tintColor={typeof color === 'string' ? color : colors.text}
+                style={{ width: size, height: size }}
+              />
+            ),
+          }}
         />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="analytics">
-        <NativeTabs.Trigger.Label>Analytics</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+      ))}
+    </Tabs>
   );
 }

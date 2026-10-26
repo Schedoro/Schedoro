@@ -1,4 +1,4 @@
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 // Hard-coded sample data for tthe analytics page for now
@@ -44,7 +44,10 @@ const pieSlices = (() => {
 
 export default function AnalyticsScreen() {
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic">
       <Text style={styles.title}>Analytics</Text>
       <Text style={styles.subtitle}>Team scheduling performance</Text>
 
@@ -95,7 +98,7 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { padding: 20, paddingTop: Platform.OS === 'web' ? 110 : 48, maxWidth: 480, width: '100%', alignSelf: 'center' },
+  content: { padding: 20, paddingTop: 20, maxWidth: 480, width: '100%', alignSelf: 'center' },
   title: { fontSize: 30, fontWeight: '700', textAlign: 'center', color: '#000000' },
   subtitle: { fontSize: 14, color: '#666666', textAlign: 'center', marginTop: 4, marginBottom: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
