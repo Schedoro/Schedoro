@@ -42,7 +42,7 @@ export default function AppTabs() {
             options={{
               title,
               headerShown: name !== 'more' && name !== 'jobs',
-              ...(name === 'jobs' && {
+              ...((name === 'jobs' || name === 'more') && {
                 tabBarInactiveTintColor: '#000000',
                 tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#E5E5E5' },
               }),

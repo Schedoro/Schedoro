@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTeams } from '@/context/teams';
+import { useProfile } from '@/context/profile';
 
 const selectedColor = '#5E5EFD';
 const items = [
@@ -16,10 +17,14 @@ const items = [
 export default function MoreMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [selected, setSelected] = useState<string>('Profile');
   const { resetTeams } = useTeams();
+  const { resetProfile } = useProfile();
 
   function selectItem(label: string) {
     setSelected(label);
-    if (label === 'Analytics') {
+    if (label === 'Profile') {
+      onClose();
+      router.navigate('/more/profile');
+    } else if (label === 'Analytics') {
       onClose();
       router.navigate('/more/analytics');
     } else if (label === 'Switch teams') {
@@ -31,6 +36,7 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   function signOut() {
     onClose();
     resetTeams();
+    resetProfile();
     router.replace('/');
   }
 

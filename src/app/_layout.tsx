@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
+import { ProfileProvider } from '@/context/profile';
 import { TeamsProvider } from '@/context/teams';
 
 export default function RootLayout() {
@@ -8,13 +9,15 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <TeamsProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="teams" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-      </TeamsProvider>
+      <ProfileProvider>
+        <TeamsProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="teams" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </TeamsProvider>
+      </ProfileProvider>
     </ThemeProvider>
   );
 }
