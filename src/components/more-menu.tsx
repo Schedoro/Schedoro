@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/fonts';
@@ -10,6 +10,7 @@ import { useTeams } from '@/context/teams';
 import { useProfile } from '@/context/profile';
 
 const selectedColor = '#5E5EFD';
+const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 const items = [
   { label: 'Profile', icon: require('@/assets/images/tabIcons/ProfileIcon.svg') },
   { label: 'Analytics', icon: require('@/assets/images/tabIcons/AnalyticsIcon.svg') },
@@ -19,8 +20,23 @@ const items = [
 export default function MoreMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const [selected, setSelected] = useState<string>('Profile');
+  const [presented, setPresented] = useState(visible);
+  const [progress] = useState(() => new Animated.Value(0));
+  const { height } = useWindowDimensions();
   const { resetTeams } = useTeams();
   const { resetProfile } = useProfile();
+
+  useEffect(() => {
+    const animation = Animated.timing(progress, {
+      toValue: visible ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !visible) setPresented(false);
+    });
+    return () => animation.stop();
+  }, [visible, progress]);
 
   function selectItem(label: string) {
     setSelected(label);
@@ -42,10 +58,13 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible || presented} transparent animationType="none" onShow={() => setPresented(true)} onRequestClose={onClose}>
       <View style={styles.overlay}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]} />
         <Pressable accessibilityRole="button" accessibilityLabel="Close More menu" onPress={onClose} style={StyleSheet.absoluteFill} />
-        <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
+        <AnimatedSafeAreaView edges={['bottom', 'left', 'right']} style={[styles.safeArea, {
+          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) }],
+        }]}>
           <View style={styles.sheet}>
             <Pressable accessibilityRole="button" accessibilityLabel="Close More menu" onPress={onClose} style={styles.handleButton}>
               <View style={styles.handle} />
@@ -75,14 +94,15 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
               </Pressable>
             </ScrollView>
           </View>
-        </SafeAreaView>
+        </AnimatedSafeAreaView>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.25)' },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.25)' },
   safeArea: { width: '100%', maxWidth: 480, maxHeight: '85%', alignSelf: 'center', backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
   sheet: { flexShrink: 1, padding: 24 },
   content: { flexGrow: 1 },
