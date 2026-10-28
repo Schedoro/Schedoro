@@ -43,8 +43,8 @@ export default function ScheduleReviewScreen() {
             return (
               <View key={appointment.id} style={[styles.row, index < today.length - 1 && styles.rowBorder]}>
                 <View style={styles.times}>
-                  <Text style={styles.time}>{appointment.start}</Text>
-                  <Text style={styles.time}>{appointment.end}</Text>
+                  <Text numberOfLines={1} style={styles.time}>{appointment.start}</Text>
+                  <Text numberOfLines={1} style={styles.time}>{appointment.end}</Text>
                 </View>
                 <View style={styles.details}>
                   <View style={styles.line}>
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 16 },
   row: { flexDirection: 'row', gap: 16, paddingVertical: 12, minHeight: 110 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
-  times: { width: 60, justifyContent: 'space-between' },
+  times: { minWidth: 72, flexShrink: 0, justifyContent: 'space-between' },
   time: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.7)' },
   details: { flex: 1, justifyContent: 'space-between', gap: 4 },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, minHeight: 23 },
