@@ -41,7 +41,11 @@ export default function AppTabs() {
             } : undefined}
             options={{
               title,
-              headerShown: name !== 'more',
+              headerShown: name !== 'more' && name !== 'jobs',
+              ...(name === 'jobs' && {
+                tabBarInactiveTintColor: '#000000',
+                tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#E5E5E5' },
+              }),
               ...(name === 'more' && moreVisible && { tabBarLabelStyle: { color: '#5E5EFD' } }),
               tabBarIcon: ({ color, size }) => (
                 <Image
