@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,18 +15,17 @@ const items = [
 ] as const;
 
 export default function MoreMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const pathname = usePathname();
   const [selected, setSelected] = useState<string>('Profile');
   const { resetTeams } = useTeams();
   const { resetProfile } = useProfile();
 
   function selectItem(label: string) {
     setSelected(label);
-    if (label === 'Profile') {
+    if (label === 'Profile' || label === 'Analytics') {
+      const target = label === 'Profile' ? '/more/profile' : '/more/analytics';
       onClose();
-      router.navigate('/more/profile');
-    } else if (label === 'Analytics') {
-      onClose();
-      router.navigate('/more/analytics');
+      if (pathname !== target) router.replace(target);
     } else if (label === 'Switch teams') {
       onClose();
       router.replace('/teams');
