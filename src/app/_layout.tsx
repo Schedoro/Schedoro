@@ -1,8 +1,7 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 
 import { Fonts, productSansFonts } from '@/constants/fonts';
 import { ProfileProvider } from '@/context/profile';
@@ -18,10 +17,8 @@ const navigationFonts = {
 } as const;
 
 const lightTheme = { ...DefaultTheme, fonts: navigationFonts };
-const darkTheme = { ...DarkTheme, fonts: navigationFonts };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [fontsLoaded, fontError] = useFonts(productSansFonts);
 
   useEffect(() => {
@@ -38,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>
+    <ThemeProvider value={lightTheme}>
       <ProfileProvider>
         <TeamsProvider>
           <Stack screenOptions={{ headerShown: false }}>

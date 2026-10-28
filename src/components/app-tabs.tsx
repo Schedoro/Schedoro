@@ -1,7 +1,6 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
-import { useColorScheme } from 'react-native';
 
 import MoreMenu from '@/components/more-menu';
 import { Colors } from '@/constants/theme';
@@ -14,7 +13,7 @@ const tabs = [
 ];
 
 export default function AppTabs() {
-  const colors = Colors[useColorScheme() ?? 'light'];
+  const colors = Colors.light;
   const [moreVisible, setMoreVisible] = useState(false);
 
   return (
