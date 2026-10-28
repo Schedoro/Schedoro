@@ -19,7 +19,11 @@ import Svg, { Path } from 'react-native-svg';
 
 function GoogleIcon() {
   return (
-    <Svg width={24} height={24} viewBox="0 0 48 48" accessibilityElementsHidden>
+    <Svg
+      width={24}
+      height={24}
+      viewBox="0 0 48 48"
+      {...(Platform.OS === 'web' ? { 'aria-hidden': true } : { accessibilityElementsHidden: true })}>
       <Path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3A12 12 0 1 1 32.1 14l5.7-5.7A20 20 0 1 0 44 24c0-1.2-.1-2.4-.4-3.5Z" />
       <Path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 32.1 14l5.7-5.7A20 20 0 0 0 6.3 14.7Z" />
       <Path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.6 5.1A20 20 0 0 0 24 44Z" />

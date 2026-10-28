@@ -17,8 +17,7 @@ export default function MoreScreen() {
           ]}>
           <Text style={[styles.label, { color: colors.text }]}>Analytics</Text>
           <Text
-            accessibilityElementsHidden
-            importantForAccessibility="no"
+            aria-hidden={true}
             style={[styles.chevron, { color: colors.textSecondary }]}>
             ›
           </Text>
