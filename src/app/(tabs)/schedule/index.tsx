@@ -6,8 +6,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { Icon, icons } from '@/components/schedule/icons';
 import { appointments, type AppointmentStatus } from '@/components/schedule/schedule-data';
-import { WeekCalendar } from '@/components/schedule/week-calendar';
 import { BORDER, Button, PURPLE, useTopPadding } from '@/components/schedule/ui';
+import { WeekCalendar } from '@/components/schedule/week-calendar';
 
 // Title colour and status icon for each appointment status
 const statusStyle = (status: AppointmentStatus) => {
@@ -39,6 +39,7 @@ export default function ScheduleScreen() {
               return (
                 <Pressable
                   key={a.id}
+                  onPress={() => router.push({ pathname: '/schedule/details', params: { id: a.id } })}
                   style={[styles.row, i < today.length - 1 && styles.rowBorder]}>
                   <View style={styles.times}>
                     <Text style={styles.time}>{a.start}</Text>
@@ -79,7 +80,7 @@ export default function ScheduleScreen() {
                 color={PURPLE}
                 onPress={() => router.push('/schedule/generate')}
               />
-              <Button icon={icons.plusSmall} label="Add appointment" onPress={() => {}} />
+              <Button icon={icons.plusSmall} label="Add appointment" onPress={() => router.push('/schedule/create')} />
             </View>
           </View>
         )}
@@ -103,7 +104,14 @@ export default function ScheduleScreen() {
                 router.push('/schedule/generate');
               }}
             />
-            <Button icon={icons.plusSmall} label="Add appointment" onPress={() => setActionsVisible(false)} />
+            <Button
+              icon={icons.plusSmall}
+              label="Add appointment"
+              onPress={() => {
+                setActionsVisible(false);
+                router.push('/schedule/create');
+              }}
+            />
           </View>
         </View>
       </Modal>
