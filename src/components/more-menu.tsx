@@ -31,7 +31,6 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   function signOut() {
     onClose();
     resetTeams();
-    router.dismissAll();
     router.replace('/');
   }
 
