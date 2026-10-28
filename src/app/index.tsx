@@ -46,7 +46,7 @@ export default function LoginScreen() {
 
   function continueToApp() {
     Keyboard.dismiss();
-    router.replace('/schedule');
+    router.replace('/teams');
   }
 
   const [emailName, emailDomain] = username.trim().split('@');

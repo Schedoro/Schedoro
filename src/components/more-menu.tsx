@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTeams } from '@/context/teams';
+
 const selectedColor = '#5E5EFD';
 const items = [
   { label: 'Profile', icon: require('@/assets/images/tabIcons/ProfileIcon.svg') },
@@ -13,17 +15,22 @@ const items = [
 
 export default function MoreMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [selected, setSelected] = useState<string>('Profile');
+  const { resetTeams } = useTeams();
 
   function selectItem(label: string) {
     setSelected(label);
     if (label === 'Analytics') {
       onClose();
       router.navigate('/more/analytics');
+    } else if (label === 'Switch teams') {
+      onClose();
+      router.replace('/teams');
     }
   }
 
   function signOut() {
     onClose();
+    resetTeams();
     router.dismissAll();
     router.replace('/');
   }
