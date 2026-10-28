@@ -18,7 +18,7 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
     setSelected(label);
     if (label === 'Analytics') {
       onClose();
-      router.push('/more/analytics');
+      router.navigate('/more/analytics');
     }
   }
 
