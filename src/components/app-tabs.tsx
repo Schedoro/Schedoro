@@ -1,10 +1,9 @@
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
 import MoreMenu from '@/components/more-menu';
+import { Colors } from '@/constants/theme';
 
 const tabs = [
   { name: 'schedule', title: 'Schedule', icon: require('@/assets/images/tabIcons/CalendarIcon.svg') },
@@ -14,7 +13,7 @@ const tabs = [
 ];
 
 export default function AppTabs() {
-  const colors = Colors[useColorScheme() ?? 'light'];
+  const colors = Colors.light;
   const [moreVisible, setMoreVisible] = useState(false);
 
   return (
@@ -41,7 +40,7 @@ export default function AppTabs() {
             } : undefined}
             options={{
               title,
-              headerShown: name !== 'more' && name !== 'jobs' && name !== 'team',
+              headerShown: name !== 'more' && name !== 'schedule' && name !== 'jobs' && name !== 'team',
               ...((name === 'jobs' || name === 'more' || name === 'team') && {
                 tabBarInactiveTintColor: '#000000',
                 tabBarStyle: { backgroundColor: '#FFFFFF', borderTopColor: '#E5E5E5' },

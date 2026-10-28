@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Fonts } from '@/constants/fonts';
+
 import { useTeams } from '@/context/teams';
 import { useProfile } from '@/context/profile';
 
@@ -86,10 +88,10 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1 },
   handleButton: { position: 'absolute', top: 0, alignSelf: 'center', width: 80, height: 32, alignItems: 'center', paddingTop: 10, zIndex: 1 },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D5D5D5' },
-  title: { marginTop: 8, marginBottom: 8, fontSize: 22, lineHeight: 30, fontWeight: '700', letterSpacing: -0.5, color: '#000000' },
+  title: { marginTop: 8, marginBottom: 8, fontSize: 22, lineHeight: 30, fontFamily: Fonts.bold, letterSpacing: -0.5, color: '#000000' },
   row: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   icon: { width: 20, height: 20 },
-  label: { flex: 1, fontSize: 16, lineHeight: 24, letterSpacing: -0.3, color: '#000000' },
+  label: { flex: 1, fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24, letterSpacing: -0.3, color: '#000000' },
   chevron: { width: 9, height: 9, marginRight: 4, borderTopWidth: 1.5, borderRightWidth: 1.5, borderColor: '#999999', transform: [{ rotate: '45deg' }] },
   divider: { height: 1, backgroundColor: '#E5E5E5', marginTop: 8, marginBottom: 8 },
   pressed: { opacity: 0.6 },
