@@ -1,6 +1,9 @@
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View, KeyboardAvoidingView } from 'react-native';
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
+
+import { Fonts } from '@/constants/fonts';
 
 type Props = {
   title: string;
@@ -51,9 +54,9 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.25)' },
   sheet: { width: '100%', maxWidth: 520, maxHeight: '80%', alignSelf: 'center', backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 24, paddingRight: 12, paddingTop: 12 },
-  title: { flex: 1, fontSize: 20, fontWeight: '600', color: '#171717' },
+  title: { flex: 1, fontSize: 20, fontFamily: Fonts.medium, color: '#171717' },
   done: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
-  doneLabel: { fontSize: 16, color: '#5E5EFD', fontWeight: '600' },
+  doneLabel: { fontSize: 16, color: '#5E5EFD', fontFamily: Fonts.medium },
   content: { padding: 24, paddingTop: 12, gap: 8 },
   option: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5E5' },
   selected: { borderColor: '#5E5EFD', backgroundColor: '#F5F5FF' },

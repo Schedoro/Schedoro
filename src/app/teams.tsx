@@ -2,10 +2,13 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTeams } from '@/context/teams';
+
+import { Fonts } from '@/constants/fonts';
 
 export default function TeamsScreen() {
   const { teams, selectTeam, createTeam } = useTeams();
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
   artwork: { position: 'absolute', alignSelf: 'center' },
   content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, paddingVertical: 40 },
   form: { width: '100%', maxWidth: 390 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center', marginBottom: 12 },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center', marginBottom: 12 },
   description: { fontSize: 16, lineHeight: 22, color: '#505050', letterSpacing: -0.4, textAlign: 'center', marginBottom: 20 },
   teams: { gap: 12 },
   teamButton: { minHeight: 44, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 8 },
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.25)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   dialog: { width: '100%', maxWidth: 390, padding: 24, borderRadius: 16, backgroundColor: '#FFFFFF', gap: 16 },
-  dialogTitle: { fontSize: 24, lineHeight: 30, fontWeight: '700', color: '#171717' },
+  dialogTitle: { fontSize: 24, lineHeight: 30, fontFamily: Fonts.bold, color: '#171717' },
   input: { minHeight: 44, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: '#171717' },
   invalid: { borderColor: '#C93838' },
   error: { color: '#C93838', fontSize: 13 },

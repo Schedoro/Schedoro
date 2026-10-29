@@ -1,8 +1,7 @@
-import { Fonts } from '@/constants/fonts';
-
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 
 import { Icon, icons } from './icons';
 import { Body, Button, Checkbox, InputBox, Screen, ScreenHeader } from './ui';
@@ -118,10 +117,10 @@ const styles = StyleSheet.create({
   list: { gap: 24 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { flex: 1, gap: 2 },
-  title: { fontFamily: Fonts.regular, fontSize: 16, color: '#000000' },
-  subtitle: { fontFamily: Fonts.regular, fontSize: 14, color: 'rgba(0,0,0,0.4)' },
+  title: { fontSize: 16, color: '#000000' },
+  subtitle: { fontSize: 14, color: 'rgba(0,0,0,0.4)' },
   avatar: { width: 37, height: 37, alignItems: 'center', justifyContent: 'center' },
   round: { borderRadius: 25 },
   group: { borderRadius: 8, backgroundColor: 'rgba(229,229,229,0.5)' },
-  initials: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 16 },
+  initials: { fontSize: 14, lineHeight: 16 },
 });

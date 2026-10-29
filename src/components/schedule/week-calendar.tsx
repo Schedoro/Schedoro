@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 
 import { Fonts } from '@/constants/fonts';
 import { week } from './schedule-data';
@@ -38,7 +39,7 @@ export function WeekCalendar({ selected, onSelect, review = false }: {
 const styles = StyleSheet.create({
   week: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30 },
   day: { alignItems: 'center', gap: 8, minWidth: 33 },
-  label: { fontFamily: Fonts.regular, fontSize: 15, lineHeight: 19, color: 'rgba(0,0,0,0.7)' },
+  label: { fontSize: 15, lineHeight: 19, color: 'rgba(0,0,0,0.7)' },
   date: { width: 33, height: 33, alignItems: 'center', justifyContent: 'center' },
   circle: { position: 'absolute', inset: 0, borderRadius: 17, backgroundColor: PURPLE, opacity: 0.5 },
   lightCircle: { opacity: 0.25 },

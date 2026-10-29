@@ -1,5 +1,8 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 import Svg, { Path } from 'react-native-svg';
+
+import { Fonts } from '@/constants/fonts';
 
 // Hard-coded sample data for tthe analytics page for now
 const metrics = [
@@ -99,7 +102,7 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { padding: 20, paddingTop: 20, maxWidth: 480, width: '100%', alignSelf: 'center' },
-  title: { fontSize: 30, fontWeight: '700', textAlign: 'center', color: '#000000' },
+  title: { fontSize: 30, fontFamily: Fonts.bold, textAlign: 'center', color: '#000000' },
   subtitle: { fontSize: 14, color: '#666666', textAlign: 'center', marginTop: 4, marginBottom: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   card: {
@@ -111,8 +114,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   cardLabel: { fontSize: 12, color: '#777777' },
-  cardValue: { fontSize: 22, fontWeight: '700', marginTop: 6, color: '#000000' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 24, marginBottom: 8, color: '#000000' },
+  cardValue: { fontSize: 22, fontFamily: Fonts.bold, marginTop: 6, color: '#000000' },
+  sectionTitle: { fontSize: 16, fontFamily: Fonts.bold, marginTop: 24, marginBottom: 8, color: '#000000' },
   chartBox: { borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 12, padding: 16 },
   barRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 130 },
   barColumn: { alignItems: 'center' },

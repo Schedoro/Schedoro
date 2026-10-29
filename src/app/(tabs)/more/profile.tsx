@@ -1,8 +1,11 @@
 import { type ComponentRef, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useProfile } from '@/context/profile';
+
+import { Fonts } from '@/constants/fonts';
 
 export default function ProfileScreen() {
   const { profile, saveProfile } = useProfile();
@@ -90,7 +93,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 38, paddingVertical: 40 },
   form: { width: '100%', maxWidth: 390, paddingTop: 96 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center', marginBottom: 12 },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center', marginBottom: 12 },
   description: { fontSize: 16, lineHeight: 20, letterSpacing: -0.3, color: '#505050', textAlign: 'center', marginBottom: 6 },
   field: { gap: 6, marginBottom: 12 },
   label: { fontSize: 16, lineHeight: 20, letterSpacing: -0.3, color: '#999999' },

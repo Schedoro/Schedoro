@@ -2,7 +2,8 @@ import { Fonts } from '@/constants/fonts';
 
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 
 import { Icon, icons } from '@/components/schedule/icons';
 import { appointments, type AppointmentStatus } from '@/components/schedule/schedule-data';
@@ -129,17 +130,17 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 16, paddingVertical: 12 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
   times: { justifyContent: 'space-between' },
-  time: { fontFamily: Fonts.regular, fontSize: 14, color: 'rgba(0,0,0,0.7)' },
+  time: { fontSize: 14, color: 'rgba(0,0,0,0.7)' },
   info: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   infoText: { flex: 1, gap: 4 },
-  faded: { fontFamily: Fonts.regular, fontSize: 14, color: 'rgba(0,0,0,0.4)' },
+  faded: { fontSize: 14, color: 'rgba(0,0,0,0.4)' },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   job: { fontSize: 16, fontFamily: Fonts.bold },
   empty: { alignItems: 'center', gap: 24, paddingTop: 64, paddingHorizontal: 16 },
   emptyIcon: { backgroundColor: '#F1F4F5', padding: 24, borderRadius: 50 },
   emptyText: { gap: 12, alignItems: 'center' },
   emptyTitle: { fontSize: 28, fontFamily: Fonts.bold, color: '#000000', textAlign: 'center' },
-  emptyBody: { fontFamily: Fonts.regular, fontSize: 16, color: 'rgba(0,0,0,0.4)', textAlign: 'center' },
+  emptyBody: { fontSize: 16, color: 'rgba(0,0,0,0.4)', textAlign: 'center' },
   emptyButtons: { gap: 12, alignSelf: 'stretch', marginHorizontal: 29 },
   fab: {
     position: 'absolute',

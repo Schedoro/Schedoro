@@ -2,18 +2,8 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -188,18 +178,18 @@ const styles = StyleSheet.create({
   form: { width: '100%', maxWidth: 390 },
   title: { fontSize: 30, fontFamily: Fonts.bold, color: '#000000', textAlign: 'center', marginBottom: 26, letterSpacing: -0.8 },
   googleButton: { display: 'flex', width: 317, maxWidth: '100%', height: 44, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, alignSelf: 'center', borderWidth: 1, borderColor: '#E1E1E1', borderRadius: 30 },
-  googleLabel: { fontFamily: Fonts.regular, fontSize: 18, color: '#505050', textAlign: 'center' },
-  divider: { fontFamily: Fonts.regular, textAlign: 'center', color: '#999999', fontSize: 18, marginVertical: 28 },
-  input: { fontFamily: Fonts.regular, minHeight: 50, borderWidth: 1, borderColor: '#E1E1E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 18, color: '#171717' },
+  googleLabel: { fontSize: 18, color: '#505050', textAlign: 'center' },
+  divider: { textAlign: 'center', color: '#999999', fontSize: 18, marginVertical: 28 },
+  input: { minHeight: 50, borderWidth: 1, borderColor: '#E1E1E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 18, color: '#171717' },
   loginButton: { display: 'flex', height: 44, marginTop: 24, paddingVertical: 8, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center', gap: 8, alignSelf: 'stretch', borderRadius: 8, backgroundColor: '#171717' },
-  loginLabel: { fontFamily: Fonts.regular, color: '#FFFFFF', fontSize: 19 },
+  loginLabel: { color: '#FFFFFF', fontSize: 19 },
   pressed: { opacity: 0.7 },
-  terms: { fontFamily: Fonts.regular, marginTop: 24, color: '#969696', fontSize: 13, lineHeight: 21, textAlign: 'center' },
-  signup: { fontFamily: Fonts.regular, marginTop: 20, color: '#969696', fontSize: 13, lineHeight: 21, textAlign: 'center' },
+  terms: { marginTop: 24, color: '#969696', fontSize: 13, lineHeight: 21, textAlign: 'center' },
+  signup: { marginTop: 20, color: '#969696', fontSize: 13, lineHeight: 21, textAlign: 'center' },
   passcodeTitle: { marginBottom: 48 },
-  passcodeDescription: { fontFamily: Fonts.regular, color: '#999999', fontSize: 18, lineHeight: 28, textAlign: 'center', marginBottom: 28 },
+  passcodeDescription: { color: '#999999', fontSize: 18, lineHeight: 28, textAlign: 'center', marginBottom: 28 },
   resendButton: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 36, paddingHorizontal: 16 },
-  resendLabel: { fontFamily: Fonts.regular, color: '#999999', fontSize: 16 },
-  resendStatus: { fontFamily: Fonts.regular, color: '#999999', textAlign: 'center', fontSize: 13, marginTop: 4 },
+  resendLabel: { color: '#999999', fontSize: 16 },
+  resendStatus: { color: '#999999', textAlign: 'center', fontSize: 13, marginTop: 4 },
   underlined: { textDecorationLine: 'underline' },
 });

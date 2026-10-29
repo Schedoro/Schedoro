@@ -1,11 +1,14 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
 import { type Job, jobTemplates, useJobs } from '@/context/jobs';
+
+import { Fonts } from '@/constants/fonts';
 
 const skillOptions = ['Regular cleaning', 'Deep Cleaning', 'Window cleaning', 'Laundry', 'Organizing'];
 const durationOptions = ['30 min', '1h', '1.5h', '2h', '2.5h', '3h', '4h', '5h', '6h', '7h', '8h'];
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { width: '100%', maxWidth: 473, alignSelf: 'center', paddingTop: 48, paddingBottom: 40 },
   header: { minHeight: 44, justifyContent: 'center', marginBottom: 32, paddingHorizontal: 56 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
   backButton: { position: 'absolute', left: 12, top: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backArrow: { fontSize: 28, lineHeight: 34, color: '#000000' },
   form: { paddingHorizontal: 38, gap: 12 },

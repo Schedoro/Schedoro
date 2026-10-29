@@ -1,8 +1,11 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 
 import MemberDetailsScreen from '@/components/member-details-screen';
 import { useTeams } from '@/context/teams';
+
+import { Fonts } from '@/constants/fonts';
 
 export default function TeamMemberProfileRoute() {
   const { memberId, teamId } = useLocalSearchParams<{ memberId: string; teamId?: string }>();
@@ -24,7 +27,7 @@ export default function TeamMemberProfileRoute() {
 
 const styles = StyleSheet.create({
   empty: { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 24 },
-  title: { fontSize: 24, fontWeight: '600', color: '#171717' },
+  title: { fontSize: 24, fontFamily: Fonts.medium, color: '#171717' },
   button: { minHeight: 44, paddingHorizontal: 24, justifyContent: 'center', borderRadius: 8, backgroundColor: '#171717' },
   buttonText: { color: '#FFFFFF', fontSize: 16 },
 });

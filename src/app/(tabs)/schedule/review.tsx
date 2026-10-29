@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 
 import { Icon, icons } from '@/components/schedule/icons';
 import { appointments, workers } from '@/components/schedule/schedule-data';
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingBottom: 24 },
   heading: { marginBottom: 32 },
-  subtitle: { fontFamily: Fonts.regular, fontSize: 16, lineHeight: 20, textAlign: 'center', color: 'rgba(0,0,0,0.7)', marginTop: -20, paddingHorizontal: 16 },
+  subtitle: { fontSize: 16, lineHeight: 20, textAlign: 'center', color: 'rgba(0,0,0,0.7)', marginTop: -20, paddingHorizontal: 16 },
   bold: { fontFamily: Fonts.bold },
   calendar: { marginBottom: 16 },
   nextWeek: { position: 'absolute', right: 8, top: 26 },
@@ -100,18 +101,18 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 16, paddingVertical: 12, minHeight: 110 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
   times: { minWidth: 72, flexShrink: 0, justifyContent: 'space-between' },
-  time: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.7)' },
+  time: { fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.7)' },
   details: { flex: 1, justifyContent: 'space-between', gap: 4 },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, minHeight: 23 },
-  faded: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.4)' },
+  faded: { fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.4)' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#E1FFE6', borderRadius: 12 },
-  badgeText: { fontFamily: Fonts.regular, fontSize: 12, lineHeight: 15, color: '#02971B' },
-  job: { flex: 1, fontFamily: Fonts.regular, fontSize: 16, lineHeight: 20, color: '#000000' },
+  badgeText: { fontSize: 12, lineHeight: 15, color: '#02971B' },
+  job: { flex: 1, fontSize: 16, lineHeight: 20, color: '#000000' },
   assignees: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: { width: 31, height: 31, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: Fonts.regular, fontSize: 12, lineHeight: 15 },
-  extra: { fontFamily: Fonts.regular, fontSize: 14, color: '#000000', marginRight: 6 },
-  empty: { fontFamily: Fonts.regular, fontSize: 16, textAlign: 'center', color: 'rgba(0,0,0,0.4)', paddingVertical: 48 },
+  initials: { fontSize: 12, lineHeight: 15 },
+  extra: { fontSize: 14, color: '#000000', marginRight: 6 },
+  empty: { fontSize: 16, textAlign: 'center', color: 'rgba(0,0,0,0.4)', paddingVertical: 48 },
   actions: { flexDirection: 'row', gap: 4, paddingTop: 12, paddingBottom: 20, paddingHorizontal: 4, width: '82%', maxWidth: 400, alignSelf: 'center' },
   action: { flex: 1 },
 });

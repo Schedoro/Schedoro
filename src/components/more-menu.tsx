@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/fonts';
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 8, fontSize: 22, lineHeight: 30, fontFamily: Fonts.bold, letterSpacing: -0.5, color: '#000000' },
   row: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   icon: { width: 20, height: 20 },
-  label: { flex: 1, fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24, letterSpacing: -0.3, color: '#000000' },
+  label: { flex: 1, fontSize: 16, lineHeight: 24, letterSpacing: -0.3, color: '#000000' },
   chevron: { width: 9, height: 9, marginRight: 4, borderTopWidth: 1.5, borderRightWidth: 1.5, borderColor: '#999999', transform: [{ rotate: '45deg' }] },
   divider: { height: 1, backgroundColor: '#E5E5E5', marginTop: 8, marginBottom: 8 },
   pressed: { opacity: 0.6 },

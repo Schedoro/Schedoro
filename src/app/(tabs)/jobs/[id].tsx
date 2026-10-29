@@ -1,12 +1,15 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobNotFound from '@/components/job-not-found';
 import JobSelectionSheet from '@/components/job-selection-sheet';
 import { useJobs } from '@/context/jobs';
+
+import { Fonts } from '@/constants/fonts';
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -109,7 +112,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { width: '100%', maxWidth: 473, alignSelf: 'center', paddingTop: 48, paddingBottom: 40 },
   header: { minHeight: 44, justifyContent: 'center', marginBottom: 40, paddingHorizontal: 56 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
   backButton: { position: 'absolute', left: 12, top: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backArrow: { fontSize: 28, lineHeight: 34, color: '#000000' },
   body: { paddingHorizontal: 38 },

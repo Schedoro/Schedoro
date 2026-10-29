@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useJobs } from '@/context/jobs';
+
+import { Fonts } from '@/constants/fonts';
 
 const suitcaseIcon = require('@/assets/images/tabIcons/SuitcaseIcon.svg');
 const moreIcon = require('@/assets/images/tabIcons/DotsThreeIcon.svg');
@@ -95,7 +98,7 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   content: { width: '100%', maxWidth: 473, alignSelf: 'center', paddingHorizontal: 40, paddingBottom: 32 },
   heading: { paddingTop: 48, marginBottom: 30, alignItems: 'center', gap: 12 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
   description: { fontSize: 16, lineHeight: 22, color: '#505050', textAlign: 'center', letterSpacing: -0.4 },
   createButton: { minHeight: 44, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#171717' },
   createIcon: { width: 16, height: 16 },

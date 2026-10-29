@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useProfile } from '@/context/profile';
 import { type InvitationRole, useTeams } from '@/context/teams';
+
+import { Fonts } from '@/constants/fonts';
 
 type Props = { teamId: string; onClose: () => void; onDraftSaved: (email: string) => void };
 const roles: { value: InvitationRole; label: string }[] = [
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
   scrollContent: { alignItems: 'center', padding: 16 },
   dialog: { width: '100%', maxWidth: 390, borderRadius: 10, borderWidth: 1, borderColor: '#D5D5D5', backgroundColor: '#FFFFFF', padding: 24 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { flex: 1, fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.5, color: '#000000' },
+  title: { flex: 1, fontSize: 24, lineHeight: 32, fontFamily: Fonts.bold, letterSpacing: -0.5, color: '#000000' },
   closeButton: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center', marginVertical: -6 },
   closeIcon: { width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
   closeStroke: { position: 'absolute', width: 18, height: 2, borderRadius: 1, backgroundColor: '#000000' },

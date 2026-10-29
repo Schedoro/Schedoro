@@ -17,7 +17,7 @@ npx tsc --noEmit
 
 ## Fonts
 
-For new text or inputs, import `Fonts` from `@/constants/fonts` and set
-`fontFamily: Fonts.regular` (or `Fonts.bold`, `Fonts.mediumItalic`, etc.). Select
-weights and italics through these explicit font names rather than adding
-`fontWeight` or `fontStyle`, so each platform uses the supplied font file.
+Import `Text` and `TextInput` from `@/components/typography` for Product Sans
+by default. For other variants, use `fontFamily: Fonts.bold` (or
+`Fonts.mediumItalic`, etc.) from `@/constants/fonts` rather than `fontWeight`
+or `fontStyle`.

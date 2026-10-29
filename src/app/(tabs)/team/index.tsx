@@ -1,13 +1,16 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import TeamMemberRow from '@/components/team-member-row';
 import InviteMemberDialog from '@/components/invite-member-dialog';
 import { useProfile } from '@/context/profile';
 import { useTeams } from '@/context/teams';
+
+import { Fonts } from '@/constants/fonts';
 
 const sections = [
   { role: 'owner', label: 'Owner' },
@@ -72,7 +75,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { width: '100%', maxWidth: 473, alignSelf: 'center', paddingHorizontal: 40, paddingTop: 48, paddingBottom: 32 },
   heading: { alignItems: 'center', gap: 12, marginBottom: 32 },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center' },
   description: { fontSize: 16, lineHeight: 22, letterSpacing: -0.4, color: '#505050', textAlign: 'center' },
   ownerLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ownerIcon: { width: 16, height: 16 },

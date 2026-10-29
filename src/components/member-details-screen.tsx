@@ -1,11 +1,14 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
 import { type TeamMember, useTeams } from '@/context/teams';
+
+import { Fonts } from '@/constants/fonts';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const roleLabels = { owner: 'Owner', manager: 'Manager', worker: 'Worker' } as const;
@@ -174,7 +177,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { width: '100%', maxWidth: 473, alignSelf: 'center', paddingBottom: 24 },
   header: { flexShrink: 0, width: '100%', maxWidth: 473, alignSelf: 'center', paddingHorizontal: 40, paddingTop: 48, paddingBottom: 32, alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF' },
-  title: { fontSize: 32, lineHeight: 40, fontWeight: '700', letterSpacing: -0.8, color: '#000000', textAlign: 'center', paddingHorizontal: 12 },
+  title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center', paddingHorizontal: 12 },
   email: { fontSize: 16, lineHeight: 22, letterSpacing: -0.3, color: '#505050', textAlign: 'center' },
   backButton: { position: 'absolute', top: 48, left: 12, width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   backArrow: { fontSize: 28, lineHeight: 34, color: '#000000' },

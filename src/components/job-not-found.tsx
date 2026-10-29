@@ -1,5 +1,8 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/typography';
+
+import { Fonts } from '@/constants/fonts';
 
 export default function JobNotFound() {
   return (
@@ -14,7 +17,7 @@ export default function JobNotFound() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', padding: 32, gap: 24 },
-  title: { color: '#171717', fontSize: 24, fontWeight: '600' },
+  title: { color: '#171717', fontSize: 24, fontFamily: Fonts.medium },
   button: { backgroundColor: '#171717', borderRadius: 8, minHeight: 44, justifyContent: 'center', paddingHorizontal: 24 },
   label: { color: '#FFFFFF', fontSize: 16 },
 });

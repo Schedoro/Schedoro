@@ -2,15 +2,8 @@ import { Fonts } from '@/constants/fonts';
 
 import { useRouter } from 'expo-router';
 import { type ReactNode } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type TextInputProps,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
+import { Text, TextInput } from '@/components/typography';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -119,13 +112,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontFamily: Fonts.bold, color: '#000000', textAlign: 'center' },
   body: { paddingHorizontal: 38, gap: 24 },
   field: { gap: 6 },
-  label: { fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24, color: 'rgba(0,0,0,0.4)' },
-  helper: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 24, color: 'rgba(0,0,0,0.7)' },
+  label: { fontSize: 16, lineHeight: 24, color: 'rgba(0,0,0,0.4)' },
+  helper: { fontSize: 14, lineHeight: 24, color: 'rgba(0,0,0,0.7)' },
   box: { borderWidth: 1, borderColor: BORDER, borderRadius: 8, paddingHorizontal: 12, minHeight: 40 },
   selectBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   inputBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   multilineBox: { alignItems: 'flex-start', paddingVertical: 8 },
-  value: { flex: 1, fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24, color: '#000000' },
+  value: { flex: 1, fontSize: 16, lineHeight: 24, color: '#000000' },
   placeholder: { color: 'rgba(0,0,0,0.4)' },
   input: { paddingVertical: 8 },
   button: {
@@ -137,7 +130,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
   },
-  buttonText: { fontFamily: Fonts.regular, fontSize: 16, color: '#FAFAFA' },
+  buttonText: { fontSize: 16, color: '#FAFAFA' },
   pressed: { opacity: 0.8 },
   checkbox: {
     width: 24,
