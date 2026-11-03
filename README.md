@@ -1,23 +1,35 @@
 # Schedoro
 
-Expo Router app with Schedule, Jobs, Team, and More tabs. Analytics is available under More.
+- `frontend/`: Expo mobile app. See [frontend/README.md](frontend/README.md).
+- `backend/`: FastAPI backend.
 
-## Development
+## Frontend
 
 ```bash
-npm install
+cd frontend
+npm ci
 npx expo start
 ```
 
-Scan the QR code with Expo Go. If your phone cannot reach the development server over Wi-Fi, use `npx expo start --tunnel`.
+## Backend
 
 ```bash
-npx tsc --noEmit
+cd backend
+python -m venv .venv
 ```
 
-## Fonts
+On Windows:
 
-Import `Text` and `TextInput` from `@/components/typography` for Product Sans
-by default. For other variants, use `fontFamily: Fonts.bold` (or
-`Fonts.mediumItalic`, etc.) from `@/constants/fonts` rather than `fontWeight`
-or `fontStyle`.
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m uvicorn main:app --reload
+```
+
+On macOS/Linux, use `.venv/bin/python` instead.
+
+Open http://localhost:8000 for `hello from schedoro backend`.
+
+### Run the backend simply
+Enter directory: `cd backend` 
+Build command: `pip install -r requirements.txt`
+Start command: `uvicorn main:app`
