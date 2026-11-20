@@ -1,3 +1,4 @@
+import { useAuth } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -26,6 +27,7 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   const { height } = useWindowDimensions();
   const { resetTeams } = useTeams();
   const { resetProfile } = useProfile();
+  const { signOut: endSession } = useAuth();
 
   useEffect(() => {
     const animation = Animated.timing(progress, {
@@ -51,11 +53,12 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
     }
   }
 
-  function signOut() {
+  async function signOut() {
     onClose();
     resetTeams();
     resetProfile();
-    router.replace('/');
+    // Clearing the session flips the root layout's guards, which return to the login screen.
+    await endSession();
   }
 
   return (

@@ -1,11 +1,7 @@
+import { useUser } from '@clerk/expo';
 import { createContext, type ReactNode, useContext, useState } from 'react';
 
 type Profile = { fullName: string; email: string };
-
-const initialProfile: Profile = {
-  fullName: 'Anya Popova',
-  email: 'popovann@sheridancollege.ca',
-};
 
 const ProfileContext = createContext<{
   profile: Profile;
@@ -14,10 +10,17 @@ const ProfileContext = createContext<{
 } | null>(null);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState(initialProfile);
+  const { user } = useUser();
+  // Local edits from the Profile screen. Saving them to Clerk is still to do.
+  const [edits, setEdits] = useState<Profile | null>(null);
+
+  const profile: Profile = edits ?? {
+    fullName: user?.fullName ?? '',
+    email: user?.primaryEmailAddress?.emailAddress ?? '',
+  };
 
   return (
-    <ProfileContext.Provider value={{ profile, saveProfile: setProfile, resetProfile: () => setProfile(initialProfile) }}>
+    <ProfileContext.Provider value={{ profile, saveProfile: setEdits, resetProfile: () => setEdits(null) }}>
       {children}
     </ProfileContext.Provider>
   );

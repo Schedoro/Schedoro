@@ -19,7 +19,9 @@
         {
           "backgroundColor": "#FFFFFF"
         }
-      ]
+      ],
+      "@clerk/expo",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
