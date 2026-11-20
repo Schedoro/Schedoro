@@ -1,7 +1,7 @@
 # Schedoro
 
 - `frontend/`: Expo mobile app. See [frontend/README.md](frontend/README.md).
-- `backend/`: FastAPI backend.
+- `backend/`: FastAPI backend. See [backend/README.md](backend/README.md).
 
 ## Frontend
 
