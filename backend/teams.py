@@ -68,6 +68,9 @@ class TeamService:
         self.members = members
 
     async def my_teams(self, user_id: str) -> list[Team]:
+        # anyone invited by email joins those teams the first time they sign in and load this list
+        profile = await clerk_profile(user_id)
+        await self.members.link_account(user_id, profile.verified_emails, profile.name)
         roles = await self.members.roles_for_user(user_id)
         names = await self.teams.names(list(roles))
         return [Team(teamId=team_id, name=name, myRole=roles[team_id]) for team_id, name in names.items()]
@@ -80,12 +83,12 @@ class TeamService:
         return Team(teamId=team_id, name=name, myRole=role)
 
     async def create_team(self, team: TeamIn, user_id: str) -> Team:
-        full_name, email = await clerk_profile(user_id)
-        if not email:
+        profile = await clerk_profile(user_id)
+        if not profile.email:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Add an email address to your account before creating a team.")
         team_id = await self.teams.insert(team, created_by=user_id)
         try:
-            owner = MemberIn(fullName=full_name, email=email, role=Role.owner)
+            owner = MemberIn(fullName=profile.name, email=profile.email, role=Role.owner)
             await self.members.insert(team_id, owner, user_id=user_id)
         except Exception:
             await self.teams.delete(team_id)  # don't leave a team nobody can open

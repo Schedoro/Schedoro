@@ -105,17 +105,19 @@ export default function TeamScreen() {
           );
         })}
 
-        <Pressable accessibilityRole="button" onPress={() => setInviteOpen(true)} style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}>
-          <Image source={require('@/assets/images/InviteMemberIcon.svg')} tintColor="#FFFFFF" style={styles.inviteIcon} />
-          <Text style={styles.inviteLabel}>Invite member</Text>
-        </Pressable>
+        {canManage && (
+          <Pressable accessibilityRole="button" onPress={() => setInviteOpen(true)} style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}>
+            <Image source={require('@/assets/images/InviteMemberIcon.svg')} tintColor="#FFFFFF" style={styles.inviteIcon} />
+            <Text style={styles.inviteLabel}>Invite member</Text>
+          </Pressable>
+        )}
         {team && canManage && (
           <Pressable accessibilityRole="button" accessibilityLabel={`Edit team ${team.name}`} onPress={() => setSettingsFor(team)} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}>
             <Image source={require('@/assets/images/PencilIcon.svg')} tintColor="#000000" style={styles.inviteIcon} />
             <Text style={styles.editLabel}>Edit team</Text>
           </Pressable>
         )}
-        {lastInvite && lastInvite.teamId === team?.id && <Text accessibilityLiveRegion="polite" style={styles.draftStatus}>{lastInvite.email} was added to the team as invited. Invite emails aren’t connected yet, so no email was sent.</Text>}
+        {lastInvite && lastInvite.teamId === team?.id && <Text accessibilityLiveRegion="polite" style={styles.draftStatus}>Invite sent to {lastInvite.email}. They’ll join the team when they sign up or sign in with that email.</Text>}
       </ScrollView>
       {settingsTeam && <TeamSettingsSheet team={settingsTeam} onClose={() => setSettingsFor(undefined)} onRenamed={(name) => {
         setSettingsFor(undefined);

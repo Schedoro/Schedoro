@@ -1,6 +1,10 @@
 """Team management: team members (owners, managers, workers)
 
 Layers: router (API)  ->  MemberService (app logic)  ->  MemberRepository (infra / MongoDB)
+
+Adding a member saves them with userId = None and has Clerk email them an invite. When someone signs in,
+any member records matching one of their verified emails get their Clerk userId (see link_account).
+Roles are ours, not Clerk's: the invite email doesn't know about them, the member record does.
 """
 
 from typing import NoReturn
@@ -11,9 +15,11 @@ from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
-from auth import CurrentUser
+from auth import CurrentUser, revoke_invite, send_invite
 from db import Database
 from models import Member, MemberIn, Role
+
+MANAGERS = (Role.owner, Role.manager)
 
 
 class EmailTaken(Exception):
@@ -46,6 +52,9 @@ class MemberRepository:
         cursor = self.collection.find({"userId": user_id}, {"teamId": 1, "role": 1})
         return {doc["teamId"]: Role(doc["role"]) async for doc in cursor}
 
+    async def count_owners(self, team_id: str) -> int:
+        return await self.collection.count_documents({"teamId": team_id, "role": Role.owner.value})
+
     async def insert(self, team_id: str, member: MemberIn, user_id: str | None = None) -> Member:
         doc = {**member.model_dump(mode="json"), "teamId": team_id, "userId": user_id}
         try:
@@ -54,6 +63,9 @@ class MemberRepository:
             raise EmailTaken
         doc["_id"] = result.inserted_id
         return _to_member(doc)
+
+    async def set_invitation(self, member_id: str, invitation_id: str) -> None:
+        await self.collection.find_one_and_update({"_id": ObjectId(member_id)}, {"$set": {"invitationId": invitation_id}})
 
     async def update(self, team_id: str, member_id: str, member: MemberIn) -> Member | None:
         oid = _object_id(member_id)
@@ -69,12 +81,23 @@ class MemberRepository:
             raise EmailTaken
         return _to_member(doc) if doc else None
 
-    async def delete(self, team_id: str, member_id: str) -> bool:
+    async def delete(self, team_id: str, member_id: str) -> dict | None:
+        """Returns the deleted document so its pending invite can be revoked."""
         oid = _object_id(member_id)
         if oid is None:
-            return False
-        result = await self.collection.delete_one({"_id": oid, "teamId": team_id})
-        return result.deleted_count == 1
+            return None
+        return await self.collection.find_one_and_delete({"_id": oid, "teamId": team_id})
+
+    async def link_account(self, user_id: str, emails: list[str], name: str) -> None:
+        """Gives every not-yet-joined member with one of these emails the user's Clerk ID."""
+        if not emails:
+            return
+        await self.collection.update_many(
+            {"userId": None, "email": {"$in": emails}},
+            {"$set": {"userId": user_id}, "$unset": {"invitationId": ""}},
+        )
+        if name:  # the manager may not have typed a name, use the one from their account
+            await self.collection.update_many({"userId": user_id, "fullName": ""}, {"$set": {"fullName": name}})
 
 
 def _object_id(value: str) -> ObjectId | None:
@@ -87,6 +110,16 @@ def _to_member(doc: dict) -> Member:
     return Member.model_validate(doc)
 
 
+async def require_role(db: AsyncDatabase, team_id: str, user_id: str, *allowed: Role) -> Role:
+    """The caller's role on the team. 404 if they aren't on it, 403 if their role isn't in `allowed`."""
+    role = await MemberRepository(db).role_of(team_id, user_id)
+    if role is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    if allowed and role not in allowed:
+        _forbidden("Only owners and managers can make changes here.")
+    return role
+
+
 class MemberService:
     def __init__(self, repository: MemberRepository):
         self.repository = repository
@@ -97,35 +130,66 @@ class MemberService:
     async def get_member(self, team_id: str, member_id: str) -> Member:
         return _found(await self.repository.get(team_id, member_id))
 
-    async def add_member(self, team_id: str, member: MemberIn) -> Member:
+    async def add_member(self, team_id: str, member: MemberIn, caller: Role) -> Member:
+        if member.role == Role.owner and caller != Role.owner:
+            _forbidden("Only the owner can add another owner.")
         try:
-            return await self.repository.insert(team_id, member)
+            added = await self.repository.insert(team_id, member)
         except EmailTaken:
             _email_taken()
+        try:
+            invitation_id = await send_invite(added.email)
+        except HTTPException:
+            await self.repository.delete(team_id, added.memberId)  # no email went out, so don't keep a half-invited member
+            raise
+        await self.repository.set_invitation(added.memberId, invitation_id)
+        return added
 
-    async def update_member(self, team_id: str, member_id: str, member: MemberIn) -> Member:
+    async def update_member(self, team_id: str, member_id: str, member: MemberIn, caller: Role) -> Member:
+        current = _found(await self.repository.get(team_id, member_id))
+        if caller != Role.owner and Role.owner in (current.role, member.role):
+            _forbidden("Only the owner can change owners.")
+        if member.email != current.email:
+            _bad_request("The email can’t be changed. Remove them and invite the new email instead.")
+        if current.role == Role.owner and member.role != Role.owner:
+            await self._keep_an_owner(team_id)
         try:
             return _found(await self.repository.update(team_id, member_id, member))
         except EmailTaken:
             _email_taken()
 
-    async def remove_member(self, team_id: str, member_id: str) -> None:
-        if not await self.repository.delete(team_id, member_id):
-            _found(None)
+    async def remove_member(self, team_id: str, member_id: str, caller: Role) -> None:
+        current = _found(await self.repository.get(team_id, member_id))
+        if current.role == Role.owner:
+            if caller != Role.owner:
+                _forbidden("Only the owner can remove an owner.")
+            await self._keep_an_owner(team_id)
+        doc = _found(await self.repository.delete(team_id, member_id))
+        if doc.get("invitationId") and not doc.get("userId"):
+            await revoke_invite(doc["invitationId"])
+
+    async def _keep_an_owner(self, team_id: str) -> None:
+        if await self.repository.count_owners(team_id) <= 1:
+            _bad_request("A team needs at least one owner. Make someone else the owner first.")
 
 
-def _found(member: Member | None) -> Member:
-    if member is None:
+def _found(value):
+    if value is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    return member
+    return value
 
 
 def _email_taken() -> NoReturn:
     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Someone with this email is already on the team.")
 
 
-# TODO: once teams implemented in MongoDB, check that user_id is a manager/owner of team_id
-# TODO: send the invite email and fill in userId when they accept
+def _forbidden(message: str) -> NoReturn:
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message)
+
+
+def _bad_request(message: str) -> NoReturn:
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+
 
 router = APIRouter(prefix="/teams/{team_id}/members", tags=["members"])
 
@@ -136,24 +200,29 @@ def _service(db: AsyncDatabase) -> MemberService:
 
 @router.get("", response_model=list[Member])
 async def list_members(team_id: str, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id)
     return await _service(db).list_members(team_id)
 
 
 @router.post("", response_model=Member, status_code=status.HTTP_201_CREATED)
 async def add_member(team_id: str, member: MemberIn, user_id: CurrentUser, db: Database):
-    return await _service(db).add_member(team_id, member)
+    caller = await require_role(db, team_id, user_id, *MANAGERS)
+    return await _service(db).add_member(team_id, member, caller)
 
 
 @router.get("/{member_id}", response_model=Member)
 async def get_member(team_id: str, member_id: str, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id)
     return await _service(db).get_member(team_id, member_id)
 
 
 @router.put("/{member_id}", response_model=Member)
 async def update_member(team_id: str, member_id: str, member: MemberIn, user_id: CurrentUser, db: Database):
-    return await _service(db).update_member(team_id, member_id, member)
+    caller = await require_role(db, team_id, user_id, *MANAGERS)
+    return await _service(db).update_member(team_id, member_id, member, caller)
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_member(team_id: str, member_id: str, user_id: CurrentUser, db: Database):
-    await _service(db).remove_member(team_id, member_id)
+    caller = await require_role(db, team_id, user_id, *MANAGERS)
+    await _service(db).remove_member(team_id, member_id, caller)

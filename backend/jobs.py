@@ -10,6 +10,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from auth import CurrentUser
 from db import Database
+from members import MANAGERS, require_role
 from models import Job, JobIn
 
 class JobRepository:
@@ -91,7 +92,7 @@ def _found(job: Job | None) -> Job:
     return job
 
 
-# TODO: once teams implemented in MongoDB, check that user_id is a manager/owner of team_id
+# everyone on the team can see jobs, only owners and managers can change them
 
 router = APIRouter(prefix="/teams/{team_id}/jobs", tags=["jobs"])
 
@@ -102,24 +103,29 @@ def _service(db: AsyncDatabase) -> JobService:
 
 @router.get("", response_model=list[Job])
 async def list_jobs(team_id: str, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id)
     return await _service(db).list_jobs(team_id)
 
 
 @router.post("", response_model=Job, status_code=status.HTTP_201_CREATED)
 async def create_job(team_id: str, job: JobIn, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id, *MANAGERS)
     return await _service(db).create_job(team_id, job)
 
 
 @router.get("/{job_id}", response_model=Job)
 async def get_job(team_id: str, job_id: str, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id)
     return await _service(db).get_job(team_id, job_id)
 
 
 @router.put("/{job_id}", response_model=Job)
 async def update_job(team_id: str, job_id: str, job: JobIn, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id, *MANAGERS)
     return await _service(db).update_job(team_id, job_id, job)
 
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_job(team_id: str, job_id: str, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id, *MANAGERS)
     await _service(db).delete_job(team_id, job_id)
