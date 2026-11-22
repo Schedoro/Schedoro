@@ -7,6 +7,7 @@ any member records matching one of their verified emails get their Clerk userId 
 Roles are ours, not Clerk's: the invite email doesn't know about them, the member record does.
 """
 
+import logging
 from typing import NoReturn
 
 from bson import ObjectId
@@ -20,6 +21,8 @@ from db import Database
 from models import Member, MemberIn, Role
 
 MANAGERS = (Role.owner, Role.manager)
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class EmailTaken(Exception):
@@ -88,16 +91,21 @@ class MemberRepository:
             return None
         return await self.collection.find_one_and_delete({"_id": oid, "teamId": team_id})
 
-    async def link_account(self, user_id: str, emails: list[str], name: str) -> None:
-        """Gives every not-yet-joined member with one of these emails the user's Clerk ID."""
+    async def link_account(self, user_id: str, emails: list[str], name: str) -> int:
+        """Gives every not-yet-joined member with one of these emails the user's Clerk ID. Returns how many."""
         if not emails:
-            return
-        await self.collection.update_many(
+            return 0
+        result = await self.collection.update_many(
             {"userId": None, "email": {"$in": emails}},
             {"$set": {"userId": user_id}, "$unset": {"invitationId": ""}},
         )
         if name:  # the manager may not have typed a name, use the one from their account
             await self.collection.update_many({"userId": user_id, "fullName": ""}, {"$set": {"fullName": name}})
+        if not result.modified_count:
+            # helps tell "invited a different address" apart from "already linked to another account"
+            matches = [(doc["teamId"], doc.get("userId")) async for doc in self.collection.find({"email": {"$in": emails}}, {"teamId": 1, "userId": 1})]
+            logger.info("no new links for %s, member records with those emails (teamId, userId): %s", user_id, matches)
+        return result.modified_count
 
 
 def _object_id(value: str) -> ObjectId | None:

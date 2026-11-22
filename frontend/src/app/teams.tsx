@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -74,7 +74,8 @@ export default function TeamsScreen() {
         style={[styles.artwork, { width: artworkWidth, height: artworkHeight, bottom: -(artworkHeight * 2) / 3 + 5 }]}
       />
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* pull down to check for teams you were just invited to */}
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={retrying} onRefresh={retry} />}>
           <View style={styles.form}>
             <Text accessibilityRole="header" style={styles.title}>Teams</Text>
             <Text style={styles.description}>Create a team or join one via email invite link.</Text>

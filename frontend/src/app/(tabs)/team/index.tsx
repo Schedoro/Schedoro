@@ -82,6 +82,7 @@ export default function TeamScreen() {
 
         {sections.map(({ role, label }, index) => {
           const members = teamMembers.filter((member) => member.role === role);
+          if (role === 'manager' && !members.length) return null; 
           return (
             <View key={role} style={[styles.section, index > 0 && styles.followingSection]}>
               <View style={styles.ownerLabel}>
