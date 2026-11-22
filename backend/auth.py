@@ -61,6 +61,10 @@ async def clerk_profile(user_id: str) -> ClerkProfile:
     except Exception:
         logger.exception("couldn't load clerk user %s", user_id)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Couldn't load your account from Clerk. Try again.")
+    unverified = [e.email_address for e in user.email_addresses if not _is_verified(e)]
+    if unverified:
+        logger.info("clerk user %s has unverified emails %s (verification: %s)", user_id, unverified,
+                    [type(e.verification).__name__ for e in user.email_addresses])
     return ClerkProfile(
         name=" ".join(part for part in (user.first_name, user.last_name) if part),
         email=next((e.email_address for e in user.email_addresses if e.id == user.primary_email_address_id), None),

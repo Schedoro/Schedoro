@@ -8,6 +8,8 @@ there as its owner with their Clerk userId, and "my teams" is every team with a 
 
 from typing import NoReturn
 
+import logging
+
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status
 from pymongo import ReturnDocument
@@ -70,8 +72,9 @@ class TeamService:
     async def my_teams(self, user_id: str) -> list[Team]:
         # anyone invited by email joins those teams the first time they sign in and load this list
         profile = await clerk_profile(user_id)
-        await self.members.link_account(user_id, profile.verified_emails, profile.name)
+        linked = await self.members.link_account(user_id, profile.verified_emails, profile.name)
         roles = await self.members.roles_for_user(user_id)
+        logger.info("teams for %s: verified emails %s, newly linked %d, on %d teams", user_id, profile.verified_emails, linked, len(roles))
         names = await self.teams.names(list(roles))
         return [Team(teamId=team_id, name=name, myRole=roles[team_id]) for team_id, name in names.items()]
 
@@ -124,6 +127,8 @@ def _not_found() -> NoReturn:
 def _forbidden(message: str) -> NoReturn:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message)
 
+
+logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
