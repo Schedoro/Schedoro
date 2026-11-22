@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, model_validator
 
@@ -48,3 +49,32 @@ class Job(JobIn):
 
     jobId: str
     teamId: str
+
+
+
+# ---------- Manual Scheduling: appointments ----------
+
+class AppointmentStatus(str, Enum):
+    Pending = "Pending"
+    Scheduled = "Scheduled"
+    InProgress = "In-Progress"
+    Completed = "Completed"
+    Cancelled = "Cancelled"
+
+
+class AppointmentIn(BaseModel):
+    """What the app sends to create an appointment. Times are the team's local time, no offset."""
+
+    jobId: str = Field(min_length=1)
+    assigneeIds: list[str] = Field(min_length=1)
+    start: datetime
+    end: datetime
+    notes: str = Field(default="", max_length=1000)
+
+
+class Appointment(AppointmentIn):
+    """What the API returns."""
+
+    appointmentId: str
+    teamId: str
+    status: AppointmentStatus = AppointmentStatus.Scheduled
