@@ -1,13 +1,13 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import JobNotFound from '@/components/job-not-found';
+import JobNotFound, { JobLoading } from '@/components/job-not-found';
 import JobSelectionSheet from '@/components/job-selection-sheet';
-import { useJobs } from '@/context/jobs';
+import { errorMessage, type Job, useJobs } from '@/context/jobs';
 
 import { Fonts } from '@/constants/fonts';
 
@@ -27,9 +27,12 @@ function formatDuration(value: string) {
 
 export default function JobDetailsScreen() {
   const { id, options } = useLocalSearchParams<{ id: string; options?: string }>();
-  const { jobs, deleteJob } = useJobs();
-  const job = jobs.find((item) => item.id === id);
+  const { jobs, status, error, deleteJob } = useJobs();
   const [sheet, setSheet] = useState<'options' | 'delete' | null>(options === 'true' ? 'options' : null);
+  // keeps the job on screen while deleting, otherwise "Job not found" flashes before going back
+  const [deleting, setDeleting] = useState<Job | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const job = jobs.find((item) => item.id === id) ?? deleting;
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -41,7 +44,31 @@ export default function JobDetailsScreen() {
     router.push({ pathname: '/jobs/edit', params: { id } });
   }
 
-  if (!job) return <JobNotFound />;
+  async function confirmDelete(target: Job) {
+    if (deleting) return;
+    setDeleting(target);
+    setDeleteError(null);
+    try {
+      await deleteJob(target.id);
+      setSheet(null);
+      goBack();
+    } catch (e) {
+      setDeleteError(errorMessage(e));
+      setDeleting(null);
+    }
+  }
+
+  function closeSheet() {
+    if (deleting) return;
+    setSheet(null);
+    setDeleteError(null);
+  }
+
+  if (!job) {
+    if (status === 'loading') return <JobLoading />;
+    if (status === 'error') return <JobNotFound title="Couldn’t load jobs" message={error} />;
+    return <JobNotFound />;
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -92,14 +119,21 @@ export default function JobDetailsScreen() {
         <JobSelectionSheet title="Job options" options={['Edit job', 'Delete job']} onClose={() => setSheet(null)} onSelect={(value) => value === 'Edit job' ? editJob() : setSheet('delete')} />
       )}
       {sheet === 'delete' && (
-        <JobSelectionSheet title="Delete job?" onClose={() => setSheet(null)}>
+        <JobSelectionSheet title="Delete job?" onClose={closeSheet}>
           <Text style={styles.value}>Delete “{job.title}” from your job templates?</Text>
+          {deleteError && <Text accessibilityRole="alert" style={styles.errorText}>{deleteError}</Text>}
           <View style={styles.confirmActions}>
-            <Pressable accessibilityRole="button" onPress={() => setSheet(null)} style={[styles.actionButton, styles.cancelButton]}>
+            <Pressable accessibilityRole="button" disabled={!!deleting} onPress={closeSheet} style={[styles.actionButton, styles.cancelButton, !!deleting && styles.pressed]}>
               <Text style={styles.actionLabel}>Cancel</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => { setSheet(null); deleteJob(job.id); goBack(); }} style={[styles.actionButton, styles.deleteButton]}>
-              <Text style={[styles.actionLabel, styles.deleteLabel]}>Delete</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !!deleting, busy: !!deleting }}
+              disabled={!!deleting}
+              onPress={() => confirmDelete(job)}
+              style={[styles.actionButton, styles.deleteButton, !!deleting && styles.pressed]}>
+              {deleting && <ActivityIndicator color="#F53238" size="small" />}
+              <Text style={[styles.actionLabel, styles.deleteLabel]}>{deleting ? 'Deleting…' : 'Delete'}</Text>
             </Pressable>
           </View>
         </JobSelectionSheet>
@@ -137,6 +171,7 @@ const styles = StyleSheet.create({
   editLabel: { color: '#FFFFFF' },
   actionIcon: { width: 18, height: 18 },
   confirmActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  errorText: { marginTop: 12, fontSize: 14, lineHeight: 20, color: '#C93838' },
   cancelButton: { backgroundColor: '#EEEEEE' },
   pressed: { opacity: 0.7 },
 });

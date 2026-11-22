@@ -1,12 +1,12 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
-import { type Job, jobTemplates, useJobs } from '@/context/jobs';
+import { errorMessage, type Job, jobTemplates, useJobs } from '@/context/jobs';
 
 import { Fonts } from '@/constants/fonts';
 
@@ -44,6 +44,8 @@ export default function JobForm({ job }: { job?: Job }) {
   const [availability, setAvailability] = useState<string[]>(job?.availability ?? []);
   const [picker, setPicker] = useState<Picker | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -59,14 +61,22 @@ export default function JobForm({ job }: { job?: Job }) {
     return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
   }
 
-  function createJob() {
+  async function saveJob() {
+    if (saving) return;
     setSubmitted(true);
-    if (!name.trim() || !location.trim()) return;
-    const values = { title: name.trim(), description: description.trim(), skills, duration, location: location.trim(), availability, category: job?.category ?? skills.join(', ') };
-    if (job) updateJob(job.id, values);
-    else addJob(values);
+    if (!name.trim() || !duration || !location.trim()) return;
+    const values = { title: name.trim(), description: description.trim(), skills, duration, location: location.trim(), availability };
     Keyboard.dismiss();
-    goBack();
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (job) await updateJob(job.id, values);
+      else await addJob(values);
+      goBack();
+    } catch (e) {
+      setSaveError(errorMessage(e));
+      setSaving(false);
+    }
   }
 
   return (
@@ -98,17 +108,28 @@ export default function JobForm({ job }: { job?: Job }) {
             </View>
 
             <SelectionField label="Skills required" placeholder="Select skills" value={skills.join(', ')} onPress={() => openPicker('skills')} />
-            <SelectionField label="Duration" placeholder="Select duration" value={duration} onPress={() => openPicker('duration')} />
+            <SelectionField label="Duration*" placeholder="Select duration" value={duration} onPress={() => openPicker('duration')} error={submitted && !duration ? 'Select a duration.' : undefined} />
             <SelectionField label="Location*" placeholder="Add location" value={location} onPress={() => openPicker('location')} error={submitted && !location.trim() ? 'Enter a location.' : undefined} />
             <SelectionField label="Availability" placeholder="Select time ranges" value={availability.join('; ')} onPress={() => openPicker('availability')} />
 
-            <Pressable accessibilityRole="button" onPress={createJob} style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}>
-              <Image
-                source={job ? require('@/assets/images/CheckmarkIcon.svg') : require('@/assets/images/tabIcons/SuitcaseIcon.svg')}
-                tintColor="#FFFFFF"
-                style={styles.suitcaseIcon}
-              />
-              <Text style={styles.createLabel}>{job ? 'Save' : 'Create'}</Text>
+            {saveError && <Text accessibilityRole="alert" style={[styles.error, styles.saveError]}>{saveError}</Text>}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving, busy: saving }}
+              disabled={saving}
+              onPress={saveJob}
+              style={({ pressed }) => [styles.createButton, (pressed || saving) && styles.pressed]}>
+              {saving ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Image
+                  source={job ? require('@/assets/images/CheckmarkIcon.svg') : require('@/assets/images/tabIcons/SuitcaseIcon.svg')}
+                  tintColor="#FFFFFF"
+                  style={styles.suitcaseIcon}
+                />
+              )}
+              <Text style={styles.createLabel}>{saving ? 'Saving…' : job ? 'Save' : 'Create'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -156,5 +177,6 @@ const styles = StyleSheet.create({
   locationInput: { minHeight: 44, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, padding: 12, fontSize: 16, color: '#171717' },
   invalid: { borderColor: '#C93838' },
   error: { fontSize: 13, color: '#C93838' },
+  saveError: { marginTop: 12, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   pressed: { opacity: 0.7 },
 });

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,16 +14,30 @@ const moreIcon = require('@/assets/images/tabIcons/DotsThreeIcon.svg');
 const searchIcon = require('@/assets/images/MagnifyingGlassIcon.svg');
 
 export default function JobsScreen() {
-  const { jobs } = useJobs();
+  const { jobs, status, error, refresh } = useJobs();
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const query = search.trim().toLocaleLowerCase();
   const filteredJobs = jobs.filter((job) =>
     `${job.title} ${job.duration} ${job.category}`.toLocaleLowerCase().includes(query)
   );
 
+  async function reload() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
+
+  let emptyState;
+  if (status === 'loading') emptyState = <ActivityIndicator accessibilityLabel="Loading jobs" color="#171717" style={styles.loading} />;
+  else if (status === 'error') emptyState = undefined; // error banner already shows it
+  else if (query) emptyState = <Text style={styles.emptyText}>No jobs found.</Text>;
+  else emptyState = <Text style={styles.emptyText}>No jobs yet. Create one to get started.</Text>;
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <FlatList
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
         data={filteredJobs}
         keyExtractor={(job) => job.id}
         style={styles.list}
@@ -60,10 +74,19 @@ export default function JobsScreen() {
                 style={styles.searchInput}
               />
             </View>
+
+            {error && !refreshing && (
+              <View accessibilityRole="alert" style={styles.errorBanner}>
+                <Text style={styles.errorText}>{status === 'ready' ? `Couldn’t refresh jobs. ${error}` : error}</Text>
+                <Pressable accessibilityRole="button" onPress={reload} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
+                  <Text style={styles.retryLabel}>Try again</Text>
+                </Pressable>
+              </View>
+            )}
           </>
         }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={<Text style={styles.emptyText}>No jobs found.</Text>}
+        ListEmptyComponent={emptyState}
         renderItem={({ item }) => (
           <View style={styles.jobRow}>
             <Pressable
@@ -117,5 +140,10 @@ const styles = StyleSheet.create({
   moreIcon: { width: 20, height: 20 },
   separator: { height: 1, backgroundColor: '#E5E5E5' },
   emptyText: { paddingVertical: 24, fontSize: 14, color: '#999999', textAlign: 'center' },
+  loading: { paddingVertical: 24 },
+  errorBanner: { gap: 8, padding: 12, marginBottom: 16, borderRadius: 8, borderWidth: 1, borderColor: '#F5C2C2', backgroundColor: '#FFF5F5' },
+  errorText: { fontSize: 14, lineHeight: 20, color: '#C93838' },
+  retryButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  retryLabel: { fontSize: 14, color: '#171717', textDecorationLine: 'underline' },
   pressed: { opacity: 0.7 },
 });
