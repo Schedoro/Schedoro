@@ -1,39 +1,99 @@
 import { Fonts } from '@/constants/fonts';
-
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+ 
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/typography';
-
+ 
 import { Icon, icons } from '@/components/schedule/icons';
-import { appointments, type AppointmentStatus } from '@/components/schedule/schedule-data';
+import { errorMessage, useJobs } from '@/context/jobs';
+import {
+  type Appointment,
+  type AppointmentStatus,
+  formatDuration,
+  formatTime,
+  toDateString,
+  useAppointmentApi,
+} from '@/lib/appointment-api';
 import { BORDER, Button, PURPLE, useTopPadding } from '@/components/schedule/ui';
 import { WeekCalendar } from '@/components/schedule/week-calendar';
-
+ 
 // Title colour and status icon for each appointment status
 const statusStyle = (status: AppointmentStatus) => {
   if (status === 'Completed') return { color: '#02971B', icon: icons.checkCircle };
   if (status === 'In-Progress') return { color: '#028B97', icon: icons.circleDashed };
   return { color: '#000000', icon: icons.circle };
 };
-
+ 
+// Monday to Sunday around the given day
+function weekOf(day: Date) {
+  const monday = new Date(day.getFullYear(), day.getMonth(), day.getDate() - ((day.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+}
+ 
 export default function ScheduleScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState(23);
+  const { jobs } = useJobs();
+  const { getAppointments } = useAppointmentApi();
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionsVisible, setActionsVisible] = useState(false);
-  const today = appointments.filter((a) => a.date === selected);
   const top = useTopPadding();
-
+ 
+  const week = weekOf(selectedDate);
+  const days = week.map((d) => ({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), date: d.getDate(), load: 0 }));
+  const dateString = toDateString(selectedDate);
+ 
+  // reload every time the screen comes into view, e.g. after creating an appointment
+  useFocusEffect(
+    useCallback(() => {
+      let stale = false;
+      setLoading(true);
+      getAppointments(dateString).then(
+        (list) => { if (!stale) { setAppointments(list); setError(null); setLoading(false); } },
+        (e) => { if (!stale) { setError(errorMessage(e)); setLoading(false); } },
+      );
+      return () => { stale = true; };
+    }, [getAppointments, dateString]),
+  );
+ 
+  // shape each appointment for the list
+  const today = appointments.map((a) => {
+    const job = jobs.find((j) => j.id === a.jobId);
+    return {
+      id: a.appointmentId,
+      job: job?.title ?? 'Unknown job',
+      city: job?.location || '',
+      start: formatTime(a.start),
+      end: formatTime(a.end),
+      duration: formatDuration(a.start, a.end),
+      status: a.status,
+    };
+  });
+ 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: top }]}>
         <Text style={styles.month}>
-          October <Text style={{ color: PURPLE }}>2026</Text>
+          {selectedDate.toLocaleDateString('en-US', { month: 'long' })}{' '}
+          <Text style={{ color: PURPLE }}>{selectedDate.getFullYear()}</Text>
         </Text>
-
-        <WeekCalendar selected={selected} onSelect={setSelected} />
-
-        {today.length > 0 ? (
+ 
+        <WeekCalendar
+          days={days}
+          monthName={selectedDate.toLocaleDateString('en-US', { month: 'long' })}
+          year={selectedDate.getFullYear()}
+          selected={selectedDate.getDate()}
+          onSelect={(n) => setSelectedDate(week.find((d) => d.getDate() === n) ?? selectedDate)}
+        />
+ 
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+ 
+        {loading ? (
+          <Text style={styles.loading}>Loading…</Text>
+        ) : today.length > 0 ? (
           <View style={styles.list}>
             {today.map((a, i) => {
               const s = statusStyle(a.status);
@@ -81,12 +141,12 @@ export default function ScheduleScreen() {
                 color={PURPLE}
                 onPress={() => router.push('/schedule/generate')}
               />
-              <Button icon={icons.plusSmall} label="Add appointment" onPress={() => router.push('/schedule/create')} />
+              <Button icon={icons.plusSmall} label="Add appointment" onPress={() => router.push({ pathname: '/schedule/create', params: { date: dateString } })} />
             </View>
           </View>
         )}
       </ScrollView>
-
+ 
       {today.length > 0 ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Schedule actions" onPress={() => setActionsVisible(true)} style={styles.fab}>
           <Icon xml={icons.plus} size={20} />
@@ -110,7 +170,7 @@ export default function ScheduleScreen() {
               label="Add appointment"
               onPress={() => {
                 setActionsVisible(false);
-                router.push('/schedule/create');
+                router.push({ pathname: '/schedule/create', params: { date: dateString } });
               }}
             />
           </View>
@@ -119,10 +179,12 @@ export default function ScheduleScreen() {
     </View>
   );
 }
-
+ 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { paddingBottom: 120, maxWidth: 480, width: '100%', alignSelf: 'center' },
+  error: { color: '#DD3636', fontSize: 14, textAlign: 'center', marginTop: 16, paddingHorizontal: 16 },
+  loading: { color: 'rgba(0,0,0,0.4)', fontSize: 14, textAlign: 'center', marginTop: 48 },
   month: { fontSize: 32, fontFamily: Fonts.bold, textAlign: 'center', color: '#000000', marginBottom: 32 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 28 },
   popup: { width: '100%', maxWidth: 360, alignSelf: 'center', padding: 24, gap: 12, borderRadius: 16, backgroundColor: '#FFFFFF' },
@@ -155,3 +217,4 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 4px rgba(0,0,0,0.25)',
   },
 });
+ 
