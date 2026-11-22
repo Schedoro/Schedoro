@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"  # 24-hour "HH:MM"
 
@@ -51,9 +51,56 @@ class Job(JobIn):
     teamId: str
 
 
+class Role(str, Enum):
+    owner = "owner"
+    manager = "manager"
+    worker = "worker"
+
+
+class MemberIn(BaseModel):
+    """What the app sends to add or update a team member."""
+
+    fullName: str = Field(default="", max_length=100)  # empty until they join and set their name
+    email: str = Field(pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$", max_length=254)
+    role: Role = Role.worker
+    location: Location | None = None
+    skills: list[str] = []
+    availability: list[AvailabilityWindow] = []
+    maxWeeklyHours: float | None = Field(default=None, gt=0, le=7 * 24)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower() if isinstance(value, str) else value
+
+
+class Member(MemberIn):
+    """What the API returns."""
+
+    memberId: str
+    teamId: str
+    userId: str | None = None  # Clerk user ID, set once they accept the invite
+
+
+class TeamIn(BaseModel):
+    """What the app sends to create or rename a team."""
+
+    name: str = Field(min_length=1, max_length=80)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
+
+
+class Team(TeamIn):
+    """What the API returns."""
+
+    teamId: str
+    myRole: Role  # the signed-in user's role on this team
+
 
 # ---------- Manual Scheduling: appointments ----------
-
 class AppointmentStatus(str, Enum):
     Pending = "Pending"
     Scheduled = "Scheduled"

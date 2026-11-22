@@ -1,13 +1,14 @@
 """Clerk session verification for FastAPI routes.
 
 Add `user_id: CurrentUser` to any route that needs a signed-in user.
+Use `clerk_profile(user_id)` to get their name and email from Clerk.
 """
 
 import logging
 import os
 from typing import Annotated
 
-from clerk_backend_api import AuthenticateRequestOptions, authenticate_request
+from clerk_backend_api import AuthenticateRequestOptions, Clerk, authenticate_request
 from fastapi import Depends, HTTPException, Request, status
 
 logger = logging.getLogger("uvicorn.error")
@@ -36,3 +37,16 @@ def require_user(request: Request) -> str:
 
 
 CurrentUser = Annotated[str, Depends(require_user)]
+
+
+async def clerk_profile(user_id: str) -> tuple[str, str | None]:
+    """The user's full name and primary email, straight from Clerk so the app can't fake them."""
+    try:
+        async with Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"]) as clerk:
+            user = await clerk.users.get_async(user_id=user_id)
+    except Exception:
+        logger.exception("couldn't load clerk user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Couldn't load your account from Clerk. Try again.")
+    name = " ".join(part for part in (user.first_name, user.last_name) if part)
+    email = next((e.email_address for e in user.email_addresses if e.id == user.primary_email_address_id), None)
+    return name, email

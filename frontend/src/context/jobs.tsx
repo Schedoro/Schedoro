@@ -1,7 +1,9 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { useTeams } from '@/context/teams';
-import { useApi } from '@/lib/api';
+import { ApiError, type ApiLocation, type ApiWindow, type DayOfWeek, errorMessage, jsonHeaders, useTeamApi } from '@/lib/api';
+
+export { errorMessage };
 
 export type Job = {
   id: string;
@@ -25,9 +27,6 @@ export const jobTemplates = [
 ];
 
 // shapes from backend/models.py
-type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
-type ApiLocation = { address: string; latitude?: number | null; longitude?: number | null; placeId?: string | null };
-type ApiWindow = { dayOfWeek: DayOfWeek; startTime: string; endTime: string };
 type ApiJobIn = {
   name: string;
   description: string;
@@ -132,29 +131,6 @@ function toApi(job: JobInput, previous?: ApiJob): ApiJobIn {
   };
 }
 
-class ApiError extends Error {
-  constructor(message: string, readonly status?: number) {
-    super(message);
-  }
-}
-
-export function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
-}
-
-async function readError(res: Response) {
-  if (res.status === 401) return 'The server couldn’t verify your sign-in. Try signing out and back in.';
-  try {
-    const body = await res.json();
-    if (typeof body?.detail === 'string') return body.detail;
-  } catch {
-    // not json, fall back to the messages below
-  }
-  if (res.status === 422) return 'Some of the job details aren’t valid. Check the form and try again.';
-  return `Something went wrong on the server (error ${res.status}).`;
-}
-
-const jsonHeaders = { 'Content-Type': 'application/json' };
 
 type JobsStatus = 'loading' | 'ready' | 'error';
 
@@ -169,26 +145,13 @@ const JobsContext = createContext<{
 } | null>(null);
 
 export function JobsProvider({ children }: { children: ReactNode }) {
-  const api = useApi();
   const { selectedTeam } = useTeams();
-  const teamId = selectedTeam?.id;
+  const request = useTeamApi(selectedTeam?.id, 'jobs');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [status, setStatus] = useState<JobsStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   // raw jobs from the api, so an edit doesn't wipe fields the app doesn't show (like lat/long)
   const apiJobs = useRef(new Map<string, ApiJob>());
-
-  const request = useCallback(async (path: string, init?: RequestInit) => {
-    if (!teamId) throw new ApiError('Pick a team first.');
-    let res: Response;
-    try {
-      res = await api(`/teams/${encodeURIComponent(teamId)}/jobs${path}`, init);
-    } catch {
-      throw new ApiError('Can’t reach the Schedoro server. Check your connection and try again.');
-    }
-    if (!res.ok) throw new ApiError(await readError(res), res.status);
-    return res;
-  }, [api, teamId]);
 
   const remember = useCallback((job: ApiJob) => {
     apiJobs.current.set(job.jobId, job);

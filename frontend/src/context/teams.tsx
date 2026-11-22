@@ -1,109 +1,116 @@
-import { createContext, type ReactNode, useContext, useState } from 'react';
+import { useAuth } from '@clerk/expo';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
-export type TeamMember = {
-  id: string;
-  fullName: string;
-  role: 'owner' | 'manager' | 'worker';
-  avatarColor: string;
-  initialsColor: string;
-  email: string;
-  location: string;
-  availability: { day: string; hours: number }[];
-  skills: string[];
-};
+import type { MemberRole } from '@/context/members';
+import { ApiError, errorMessage, jsonHeaders, useRequest } from '@/lib/api';
 
-type MemberChanges = Partial<Pick<TeamMember, 'role' | 'location' | 'availability' | 'skills'>>;
+export type Team = { id: string; name: string; myRole: MemberRole };
 
-type Team = { id: string; name: string; members: TeamMember[] };
+// shape from backend/models.py
+type ApiTeam = { teamId: string; name: string; myRole: MemberRole };
 
-export type InvitationRole = 'worker' | 'manager';
-type InvitationDraft = { id: string; teamId: string; email: string; role: InvitationRole };
+const fromApi = (team: ApiTeam): Team => ({ id: team.teamId, name: team.name, myRole: team.myRole });
+
 type ReminderDraft = { teamId: string; memberId: string; kind: 'availability' | 'skills' };
 
-const currentUserOwner: TeamMember = {
-  id: 'current-user', fullName: 'You', role: 'owner', avatarColor: '#A5F3FC', initialsColor: '#009DB4',
-  email: '', location: '', availability: [], skills: [],
-};
-
-const sampleDetails = {
-  location: '99 Oak Rd., Oakville, Ontario, Canada',
-  availability: [{ day: 'Mon', hours: 8 }, { day: 'Tue', hours: 8 }, { day: 'Wed', hours: 6 }, { day: 'Thu', hours: 6 }, { day: 'Fri', hours: 8 }],
-  skills: ['Regular cleaning', 'Deep cleaning'],
-};
-
-const initialTeams: Team[] = [
-  {
-    id: 'house-fairy', name: 'The House Fairy', members: [
-      { ...sampleDetails, id: 'natalia', fullName: 'Natalia Popova', email: 'natalia.popova@example.com', role: 'owner', avatarColor: '#F5ADFF', initialsColor: '#A000BC' },
-      { ...sampleDetails, id: 'current-user', fullName: 'Anya Popova', email: 'popovann@sheridancollege.ca', role: 'manager', avatarColor: '#A5F3FC', initialsColor: '#009DB4' },
-      { ...sampleDetails, id: 'aryana', fullName: 'Aryana Kabir', email: 'aryana.kabir@example.com', role: 'manager', avatarColor: '#FFCEAE', initialsColor: '#A94B00' },
-      { ...sampleDetails, id: 'aleksandar', fullName: 'Aleksandar Bursac', email: 'aleksandar.bursac@example.com', role: 'manager', avatarColor: '#D5FFA6', initialsColor: '#539400' },
-      { ...sampleDetails, id: 'joe', fullName: 'Joe Smith', email: 'joe.smith@example.com', role: 'worker', avatarColor: '#FFADB2', initialsColor: '#BD0000' },
-    ],
-  },
-  { id: 'pipe-whisperer', name: 'The Pipe Whisperer', members: [currentUserOwner] },
-];
+type TeamsStatus = 'loading' | 'ready' | 'error';
 
 const TeamsContext = createContext<{
   teams: Team[];
+  status: TeamsStatus;
+  error: string | null;
+  refresh: () => Promise<void>;
   selectedTeam: Team | undefined;
   selectTeam: (id: string) => void;
-  createTeam: (name: string) => Team;
-  invitationDrafts: InvitationDraft[];
-  addInvitationDraft: (teamId: string, email: string, role: InvitationRole) => void;
-  updateMember: (teamId: string, memberId: string, changes: MemberChanges) => void;
-  removeMember: (teamId: string, memberId: string) => void;
+  createTeam: (name: string) => Promise<Team>;
+  renameTeam: (id: string, name: string) => Promise<Team>;
+  deleteTeam: (id: string) => Promise<void>;
   reminderDrafts: ReminderDraft[];
   saveReminderDraft: (teamId: string, memberId: string, kind: ReminderDraft['kind']) => void;
   resetTeams: () => void;
 } | null>(null);
 
 export function TeamsProvider({ children }: { children: ReactNode }) {
-  const [teams, setTeams] = useState(initialTeams);
+  const { isSignedIn } = useAuth();
+  const request = useRequest();
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [status, setStatus] = useState<TeamsStatus>('loading');
+  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
-  const [invitationDrafts, setInvitationDrafts] = useState<InvitationDraft[]>([]);
   const [reminderDrafts, setReminderDrafts] = useState<ReminderDraft[]>([]);
+
+  const fetchTeams = useCallback(async (): Promise<ApiTeam[]> => (await request('/teams')).json(), [request]);
+
+  const showTeams = useCallback((list: ApiTeam[]) => {
+    setTeams(list.map(fromApi));
+    setError(null);
+    setStatus('ready');
+  }, []);
+
+  const showError = useCallback((e: unknown) => {
+    setError(errorMessage(e));
+    // if a refresh fails, keep showing the teams we already have
+    setStatus((current) => current === 'ready' ? 'ready' : 'error');
+  }, []);
+
+  const refresh = useCallback(() => fetchTeams().then(showTeams, showError), [fetchTeams, showTeams, showError]);
+
+  // this provider wraps the sign-in screens too, so only load once someone is signed in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let stale = false;
+    fetchTeams().then(
+      (list) => { if (!stale) showTeams(list); },
+      (e) => { if (!stale) showError(e); },
+    );
+    return () => { stale = true; };
+  }, [isSignedIn, fetchTeams, showTeams, showError]);
+
+  const createTeam = useCallback(async (name: string) => {
+    const res = await request('/teams', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ name: name.trim() }) });
+    const team = fromApi(await res.json());
+    setTeams((current) => [...current, team]);
+    setSelectedId(team.id);
+    return team;
+  }, [request]);
+
+  const renameTeam = useCallback(async (id: string, name: string) => {
+    const body = JSON.stringify({ name: name.trim() });
+    const res = await request(`/teams/${encodeURIComponent(id)}`, { method: 'PUT', headers: jsonHeaders, body });
+    const team = fromApi(await res.json());
+    setTeams((current) => current.map((item) => item.id === id ? team : item));
+    return team;
+  }, [request]);
+
+  const deleteTeam = useCallback(async (id: string) => {
+    try {
+      await request(`/teams/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (e) {
+      // 404 means it's already gone, so just drop it from the list
+      if (!(e instanceof ApiError && e.status === 404)) throw e;
+    }
+    setTeams((current) => current.filter((team) => team.id !== id));
+    setSelectedId((current) => current === id ? undefined : current);
+    setReminderDrafts((current) => current.filter((draft) => draft.teamId !== id));
+  }, [request]);
 
   function saveReminderDraft(teamId: string, memberId: string, kind: ReminderDraft['kind']) {
     setReminderDrafts((current) => [...current.filter((draft) => !(draft.teamId === teamId && draft.memberId === memberId && draft.kind === kind)), { teamId, memberId, kind }]);
   }
 
-  function updateMember(teamId: string, memberId: string, changes: MemberChanges) {
-    setTeams((current) => current.map((team) => team.id === teamId ? {
-      ...team, members: team.members.map((member) => member.id === memberId ? { ...member, ...changes } : member),
-    } : team));
-  }
-
-  function removeMember(teamId: string, memberId: string) {
-    setTeams((current) => current.map((team) => team.id === teamId ? {
-      ...team, members: team.members.filter((member) => member.id !== memberId),
-    } : team));
-    setReminderDrafts((current) => current.filter((draft) => draft.teamId !== teamId || draft.memberId !== memberId));
-  }
-
-  function addInvitationDraft(teamId: string, email: string, role: InvitationRole) {
-    setInvitationDrafts((current) => [...current, {
-      id: `invitation-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      teamId, email: email.trim().toLowerCase(), role,
-    }]);
-  }
-
-  function createTeam(name: string) {
-    const team: Team = { id: `team-${Date.now()}-${Math.random().toString(36).slice(2)}`, name: name.trim(), members: [currentUserOwner] };
-    setTeams((current) => [...current, team]);
-    setSelectedId(team.id);
-    return team;
-  }
-
   function resetTeams() {
-    setTeams(initialTeams);
+    setTeams([]);
+    setStatus('loading');
+    setError(null);
     setSelectedId(undefined);
-    setInvitationDrafts([]);
     setReminderDrafts([]);
   }
 
   return (
-    <TeamsContext.Provider value={{ teams, selectedTeam: teams.find((team) => team.id === selectedId), selectTeam: setSelectedId, createTeam, resetTeams, invitationDrafts, addInvitationDraft, updateMember, removeMember, reminderDrafts, saveReminderDraft }}>
+    <TeamsContext.Provider value={{
+      teams, status, error, refresh, selectedTeam: teams.find((team) => team.id === selectedId), selectTeam: setSelectedId,
+      createTeam, renameTeam, deleteTeam, resetTeams, reminderDrafts, saveReminderDraft,
+    }}>
       {children}
     </TeamsContext.Provider>
   );

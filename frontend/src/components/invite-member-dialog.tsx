@@ -1,33 +1,44 @@
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useMembers } from '@/context/members';
 import { useProfile } from '@/context/profile';
-import { type InvitationRole, useTeams } from '@/context/teams';
+import { errorMessage } from '@/lib/api';
 
 import { Fonts } from '@/constants/fonts';
 
-type Props = { teamId: string; onClose: () => void; onDraftSaved: (email: string) => void };
+type InvitationRole = 'worker' | 'manager';
+type Props = { onClose: () => void; onInvited: (email: string) => void };
 const roles: { value: InvitationRole; label: string }[] = [
   { value: 'worker', label: 'Worker' },
   { value: 'manager', label: 'Manager' },
 ];
 
-export default function InviteMemberDialog({ teamId, onClose, onDraftSaved }: Props) {
-  const { addInvitationDraft, invitationDrafts } = useTeams();
+export default function InviteMemberDialog({ onClose, onInvited }: Props) {
+  const { members, addMember } = useMembers();
   const { profile } = useProfile();
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InvitationRole>('worker');
   const [roleOpen, setRoleOpen] = useState(false);
   const [error, setError] = useState('');
 
   function close() {
+    if (saving) return;
     Keyboard.dismiss();
     onClose();
   }
 
-  function invite() {
+  async function invite() {
+    if (saving) return;
+    if (!name.trim()) {
+      setNameError('Enter their name.');
+      return;
+    }
     const address = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
       setError('Enter a valid email address.');
@@ -37,13 +48,20 @@ export default function InviteMemberDialog({ teamId, onClose, onDraftSaved }: Pr
       setError('You are already a member of this team.');
       return;
     }
-    if (invitationDrafts.some((draft) => draft.teamId === teamId && draft.email === address)) {
-      setError('An invitation draft already exists for this email.');
+    // the server checks this too, this just saves a round trip
+    if (members.some((member) => member.email === address)) {
+      setError('Someone with this email is already on the team.');
       return;
     }
-    addInvitationDraft(teamId, address, role);
     Keyboard.dismiss();
-    onDraftSaved(address);
+    setSaving(true);
+    try {
+      await addMember(name, address, role);
+      onInvited(address);
+    } catch (e) {
+      setError(errorMessage(e));
+      setSaving(false);
+    }
   }
 
   return (
@@ -64,6 +82,20 @@ export default function InviteMemberDialog({ teamId, onClose, onDraftSaved }: Pr
               </View>
               <Text style={styles.description}>The user has 1 week to join via email</Text>
               <TextInput
+                accessibilityLabel="Full name"
+                placeholder="Full name"
+                placeholderTextColor="#999999"
+                value={name}
+                onChangeText={(value) => { setName(value); setNameError(''); }}
+                autoCapitalize="words"
+                autoComplete="name"
+                textContentType="name"
+                returnKeyType="next"
+                maxLength={100}
+                style={[styles.input, !!nameError && styles.invalid]}
+              />
+              {nameError ? <Text accessibilityRole="alert" style={styles.error}>{nameError}</Text> : null}
+              <TextInput
                 accessibilityLabel="Email address"
                 placeholder="Enter email address"
                 placeholderTextColor="#999999"
@@ -76,7 +108,7 @@ export default function InviteMemberDialog({ teamId, onClose, onDraftSaved }: Pr
                 textContentType="emailAddress"
                 returnKeyType="done"
                 onSubmitEditing={invite}
-                style={[styles.input, error && styles.invalid]}
+                style={[styles.input, styles.emailInput, !!error && styles.invalid]}
               />
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 
@@ -106,8 +138,8 @@ export default function InviteMemberDialog({ teamId, onClose, onDraftSaved }: Pr
                 <Pressable accessibilityRole="button" onPress={close} style={({ pressed }) => [styles.button, styles.cancelButton, pressed && styles.pressed]}>
                   <Text style={styles.cancelLabel}>Cancel</Text>
                 </Pressable>
-                <Pressable accessibilityRole="button" onPress={invite} style={({ pressed }) => [styles.button, styles.inviteButton, pressed && styles.pressed]}>
-                  <Text style={styles.inviteLabel}>Invite</Text>
+                <Pressable accessibilityRole="button" accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={invite} style={({ pressed }) => [styles.button, styles.inviteButton, (pressed || saving) && styles.pressed]}>
+                  {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.inviteLabel}>Invite</Text>}
                 </Pressable>
               </View>
             </View>
@@ -133,6 +165,7 @@ const styles = StyleSheet.create({
   closeBackward: { transform: [{ rotate: '-45deg' }] },
   description: { fontSize: 16, lineHeight: 24, color: '#999999', letterSpacing: -0.4, marginTop: 4, marginBottom: 16 },
   input: { minHeight: 48, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: '#000000', fontSize: 18 },
+  emailInput: { marginTop: 14 },
   invalid: { borderColor: '#C93838' },
   error: { fontSize: 13, color: '#C93838', marginTop: 6 },
   roleField: { marginTop: 14 },
