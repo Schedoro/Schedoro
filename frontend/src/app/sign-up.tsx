@@ -21,13 +21,9 @@ import { Text, TextInput } from '@/components/typography';
 
 type InputRef = ComponentRef<typeof NativeTextInput>;
 
-// Matches the minimum length set in the Clerk Dashboard (User & authentication → Password).
-const MIN_PASSWORD_LENGTH = 15;
-
 const FIELD_LABELS: Record<string, string> = {
   first_name: 'first name',
   last_name: 'last name',
-  password: 'password',
   email_address: 'email',
 };
 
@@ -35,7 +31,7 @@ function signUpErrorMessage(error: unknown) {
   const code = errorCode(error);
   if (code === 'form_identifier_exists') return 'An account with this email already exists. Log in instead.';
   if (code === 'too_many_requests') return 'Too many requests. Wait a minute and try again.';
-  // Password and format problems: Clerk's own message explains the rule that failed.
+  // Format problems: Clerk's own message explains the rule that failed.
   if (code?.startsWith('form_')) return errorText(error) ?? CONNECTION_ERROR;
   return CONNECTION_ERROR;
 }
@@ -45,14 +41,12 @@ export default function SignUpScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState(params.email ?? '');
-  const [password, setPassword] = useState('');
   const [step, setStep] = useState<'details' | 'passcode'>('details');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { signUp } = useSignUp();
   const lastNameInput = useRef<InputRef>(null);
   const emailInput = useRef<InputRef>(null);
-  const passwordInput = useRef<InputRef>(null);
   const address = email.trim().toLowerCase();
 
   function goToLogIn() {
@@ -71,15 +65,11 @@ export default function SignUpScreen() {
       setError('Enter a valid email address.');
       return;
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Your password needs at least ${MIN_PASSWORD_LENGTH} characters.`);
-      return;
-    }
     setBusy(true);
     setError('');
-    const { error: createError } = await signUp.password({
+    // no password, the account is confirmed with the emailed code below (same as sign-in)
+    const { error: createError } = await signUp.create({
       emailAddress: address,
-      password,
       firstName: firstName.trim() || undefined,
       lastName: lastName.trim() || undefined,
     });
@@ -193,35 +183,12 @@ export default function SignUpScreen() {
               autoCorrect={false}
               autoComplete="email"
               textContentType="emailAddress"
-              returnKeyType="next"
-              submitBehavior="submit"
-              onSubmitEditing={() => passwordInput.current?.focus()}
-              style={authStyles.input}
-            />
-            <TextInput
-              ref={passwordInput}
-              accessibilityLabel="Password"
-              accessibilityHint={`At least ${MIN_PASSWORD_LENGTH} characters`}
-              placeholder="Create password"
-              placeholderTextColor="#999999"
-              value={password}
-              onChangeText={edit(setPassword)}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="new-password"
-              textContentType="newPassword"
-              passwordRules={`minlength: ${MIN_PASSWORD_LENGTH};`}
               returnKeyType="go"
               onSubmitEditing={createAccount}
               style={[authStyles.input, error && authStyles.invalid]}
             />
           </View>
-          {error ? (
-            <Text accessibilityRole="alert" style={authStyles.error}>{error}</Text>
-          ) : (
-            <Text style={styles.hint}>At least {MIN_PASSWORD_LENGTH} characters.</Text>
-          )}
+          {error ? <Text accessibilityRole="alert" style={authStyles.error}>{error}</Text> : null}
 
           <PrimaryButton label="Sign up" busy={busy} onPress={createAccount} />
 
@@ -243,5 +210,4 @@ const styles = StyleSheet.create({
   fields: { gap: 12 },
   nameRow: { flexDirection: 'row', gap: 12 },
   nameInput: { flex: 1, minWidth: 0 },
-  hint: { fontSize: 13, color: '#999999', marginTop: 6 },
 });

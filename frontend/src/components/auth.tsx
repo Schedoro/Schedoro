@@ -32,7 +32,7 @@ export function errorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
-// Clerk's own human-readable explanation, e.g. for password rules.
+// Clerk's own human-readable explanation, e.g. for email format rules.
 export function errorText(error: unknown): string | undefined {
   if (!error || typeof error !== 'object') return undefined;
   const first = (error as { errors?: { longMessage?: unknown; message?: unknown }[] }).errors?.[0];
