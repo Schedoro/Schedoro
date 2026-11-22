@@ -63,7 +63,7 @@ class AppointmentStatus(str, Enum):
 
 
 class AppointmentIn(BaseModel):
-    """What the app sends to create an appointment. Times are the team's local time, no offset."""
+    """What the app sends to create an appointment. Times are the team's local time."""
 
     jobId: str = Field(min_length=1)
     assigneeIds: list[str] = Field(min_length=1)
