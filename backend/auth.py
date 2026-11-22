@@ -1,11 +1,13 @@
 """Clerk session verification for FastAPI routes.
 
 Add `user_id: CurrentUser` to any route that needs a signed-in user.
-Use `clerk_profile(user_id)` to get their name and email from Clerk.
+Use `clerk_profile(user_id)` to get their name and emails from Clerk, and
+`send_invite` / `revoke_invite` for team invite emails.
 """
 
 import logging
 import os
+from dataclasses import dataclass
 from typing import Annotated
 
 from clerk_backend_api import AuthenticateRequestOptions, Clerk, authenticate_request
@@ -39,14 +41,54 @@ def require_user(request: Request) -> str:
 CurrentUser = Annotated[str, Depends(require_user)]
 
 
-async def clerk_profile(user_id: str) -> tuple[str, str | None]:
-    """The user's full name and primary email, straight from Clerk so the app can't fake them."""
+@dataclass
+class ClerkProfile:
+    name: str
+    email: str | None  # primary email
+    verified_emails: list[str]  # only these are trusted for matching invites
+
+
+def _is_verified(email) -> bool:
+    status = getattr(email.verification, "status", None)
+    return getattr(status, "value", status) == "verified"
+
+
+async def clerk_profile(user_id: str) -> ClerkProfile:
+    """The user's name and emails, straight from Clerk so the app can't fake them."""
     try:
         async with Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"]) as clerk:
             user = await clerk.users.get_async(user_id=user_id)
     except Exception:
         logger.exception("couldn't load clerk user %s", user_id)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Couldn't load your account from Clerk. Try again.")
-    name = " ".join(part for part in (user.first_name, user.last_name) if part)
-    email = next((e.email_address for e in user.email_addresses if e.id == user.primary_email_address_id), None)
-    return name, email
+    return ClerkProfile(
+        name=" ".join(part for part in (user.first_name, user.last_name) if part),
+        email=next((e.email_address for e in user.email_addresses if e.id == user.primary_email_address_id), None),
+        verified_emails=[e.email_address.lower() for e in user.email_addresses if _is_verified(e)],
+    )
+
+
+async def send_invite(email: str) -> str:
+    """Has Clerk email an invite to sign up. Returns the invitation ID."""
+    try:
+        async with Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"]) as clerk:
+            invitation = await clerk.invitations.create_async(request={
+                "email_address": email,
+                # they might already have an account or a pending invite from another team.
+                # either way they get linked by email the next time they sign in
+                "ignore_existing": True,
+                "expires_in_days": 7,  # matches "The user has 1 week to join" in the invite dialog
+            })
+    except Exception:
+        logger.exception("couldn't send clerk invite to %s", email)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Couldn't send the invite email. Try again.")
+    return invitation.id
+
+
+async def revoke_invite(invitation_id: str) -> None:
+    try:
+        async with Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"]) as clerk:
+            await clerk.invitations.revoke_async(invitation_id=invitation_id)
+    except Exception:
+        # not worth failing the request over, the invite expires on its own after a week
+        logger.warning("couldn't revoke clerk invite %s", invitation_id, exc_info=True)

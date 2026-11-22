@@ -102,6 +102,15 @@ A team body is just `{ "name": "The House Fairy" }`. When someone creates a team
 
 A protected route returns `401 Not signed in` if the token is missing or invalid.
 
+## Invites, joining and permissions
+
+- **Inviting:** adding a member (`POST /teams/{team_id}/members`) saves them with `userId: null` and has Clerk email them an invite to sign up. It expires after 7 days. If the email can't be sent, the member isn't saved and the request returns 502.
+- **Joining:** when someone signs in and the app loads `GET /teams`, every member record matching one of their **verified** Clerk emails gets their `userId`. That's what puts them on the team. It works for new and existing Clerk accounts, and an empty `fullName` is filled in from their account.
+- **Roles** (owner, manager, worker) are stored on the member record in MongoDB, not in Clerk. The invite email doesn't know about them.
+- **Permissions:** anyone on a team can read its jobs and members. Only owners and managers can add, edit or remove them. Only an owner can add, change or remove owners, and a team always keeps at least one owner. Someone who isn't on the team gets 404.
+- Removing a member who hasn't joined yet revokes their Clerk invite. A member's email can't be changed; remove them and invite the new address instead.
+- Clerk development instances send at most 100 emails per calendar month, and sign-in codes count too. To test without using them up, invite addresses like `jane+clerk_test@example.com`: Clerk doesn't email those, and they sign in with the code `424242`.
+
 ## How auth works
 
 1. The app signs the user in with Clerk.
