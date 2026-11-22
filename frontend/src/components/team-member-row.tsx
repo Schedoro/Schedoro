@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/typography';
 
-import type { TeamMember } from '@/context/teams';
+import type { TeamMember } from '@/context/members';
 
-type Props = { member: TeamMember; name: string; onPress?: () => void };
+type Props = { member: Pick<TeamMember, 'avatarColor' | 'initialsColor'> & { invited?: boolean }; name: string; onPress?: () => void };
 
 export default function TeamMemberRow({ member, name, onPress }: Props) {
   const initials = name.trim().split(/\s+/).filter(Boolean)
@@ -14,11 +14,12 @@ export default function TeamMemberRow({ member, name, onPress }: Props) {
 
   return (
     <View style={styles.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`View ${name}’s profile`} onPress={onPress} hitSlop={{ top: 6, bottom: 6 }} style={({ pressed }) => [styles.profileLink, pressed && styles.pressed]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`View ${name}’s profile${member.invited ? ', invited' : ''}`} onPress={onPress} hitSlop={{ top: 6, bottom: 6 }} style={({ pressed }) => [styles.profileLink, pressed && styles.pressed]}>
         <View aria-hidden style={[styles.avatar, { backgroundColor: member.avatarColor }]}>
           <Text style={[styles.initials, { color: member.initialsColor }]}>{initials}</Text>
         </View>
-        <Text style={styles.name}>{name}</Text>
+        <Text numberOfLines={1} style={styles.name}>{name}</Text>
+        {member.invited && <Text style={styles.invited}>Invited</Text>}
       </Pressable>
       {onPress ? (
         <Pressable accessibilityRole="button" accessibilityLabel={`View ${name}’s profile`} onPress={onPress} hitSlop={6} style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
@@ -35,6 +36,7 @@ const styles = StyleSheet.create({
   avatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   initials: { fontSize: 12 },
   name: { flex: 1, fontSize: 16, lineHeight: 22, letterSpacing: -0.3, color: '#000000' },
+  invited: { fontSize: 14, lineHeight: 20, color: '#999999' },
   more: { width: 32, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
   moreIcon: { width: 20, height: 20 },
   pressed: { opacity: 0.7 },

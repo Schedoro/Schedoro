@@ -9,8 +9,10 @@ A small [FastAPI](https://fastapi.tiangolo.com/) server for the Schedoro app. Us
 | `main.py` | Creates the app, connects to MongoDB on startup, registers the routes. |
 | `auth.py` | Checks Clerk tokens. Gives routes the signed-in user's ID. |
 | `db.py` | MongoDB Atlas connection - gives routes the database. |
-| `models.py` | Request/response shapes (Job, Location, AvailabilityWindow). |
+| `models.py` | Request/response shapes (Team, Job, Member, Location, AvailabilityWindow). |
+| `teams.py` | Team routes -> `TeamService` -> `TeamRepository` (the `teams` collection). |
 | `jobs.py` | Job routes → `JobService` -> `JobRepository` (the `jobs` collection). |
+| `members.py` | Team member routes -> `MemberService` -> `MemberRepository` (the `members` collection). |
 | `requirements.txt` | Python dependencies. |
 | `.env.example` | Template for `.env`, which holds the backend's secrets. |
 
@@ -21,7 +23,7 @@ cd backend
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # then fill in CLERK_SECRET_KEY
-.venv/bin/uvicorn main:app --reload
+.venv/bin/uvicorn main:app --reload --host 0.0.0.0
 ```
 
 The server runs at http://localhost:8000. Interactive API docs are at http://localhost:8000/docs.
@@ -51,11 +53,21 @@ Never commit `.env`; it's already in `.gitignore`.
 | GET | `/` | No | `hello from schedoro backend` |
 | GET | `/health` | No | `{"status": "ok", "database": "ok"}` if MongoDB is reachable |
 | GET | `/me` | Yes | `{"user_id": "user_..."}`, the caller's Clerk user ID |
+| GET | `/teams` | Yes | Teams the caller is a member of, with their role on each |
+| POST | `/teams` | Yes | The created team (201). The caller is added as its owner |
+| GET | `/teams/{team_id}` | Yes | One team, or 404 if it doesn't exist or the caller isn't on it |
+| PUT | `/teams/{team_id}` | Yes | The renamed team. Owners and managers only (403 otherwise) |
+| DELETE | `/teams/{team_id}` | Yes | 204. Deletes the team's jobs and members too. Owner only |
 | GET | `/teams/{team_id}/jobs` | Yes | The team's jobs, newest first |
 | POST | `/teams/{team_id}/jobs` | Yes | The created job (201) |
 | GET | `/teams/{team_id}/jobs/{job_id}` | Yes | One job or 404 |
 | PUT | `/teams/{team_id}/jobs/{job_id}` | Yes | The updated job or 404 |
 | DELETE | `/teams/{team_id}/jobs/{job_id}` | Yes | 204 or 404 |
+| GET | `/teams/{team_id}/members` | Yes | The team's members, in the order they were added |
+| POST | `/teams/{team_id}/members` | Yes | The added member (201), or 409 if that email is already on the team |
+| GET | `/teams/{team_id}/members/{member_id}` | Yes | One member or 404 |
+| PUT | `/teams/{team_id}/members/{member_id}` | Yes | The updated member, 404, or 409 |
+| DELETE | `/teams/{team_id}/members/{member_id}` | Yes | 204 or 404 |
 
 Example job body:
 
@@ -69,6 +81,24 @@ Example job body:
   "availability": [{ "dayOfWeek": "Monday", "startTime": "08:00", "endTime": "17:00" }]
 }
 ```
+
+Example member body:
+
+```json
+{
+  "fullName": "Joe Smith",
+  "email": "joe.smith@example.com",
+  "role": "worker",
+  "location": { "address": "99 Oak Rd., Oakville, ON" },
+  "skills": ["Regular cleaning"],
+  "availability": [{ "dayOfWeek": "Monday", "startTime": "09:00", "endTime": "17:00" }],
+  "maxWeeklyHours": 40
+}
+```
+
+Only `email` is required. Adding a member doesn't send an invite email yet; `userId` stays `null` until that's built.
+
+A team body is just `{ "name": "The House Fairy" }`. When someone creates a team, the backend gets their name and email from Clerk and adds them to `members` as the owner, with their Clerk `userId`. A user's teams are the teams where they have a member record with their `userId`.
 
 A protected route returns `401 Not signed in` if the token is missing or invalid.
 
@@ -85,8 +115,8 @@ Add a `user_id: CurrentUser` parameter, and FastAPI runs the auth check before t
 ```python
 from auth import CurrentUser
 
-@app.get("/teams")
-def list_teams(user_id: CurrentUser):
+@app.get("/example")
+def example(user_id: CurrentUser):
     ...
 ```
 
@@ -94,5 +124,5 @@ From the app:
 
 ```ts
 const api = useApi();
-const res = await api('/teams');
+const res = await api('/example');
 ```
