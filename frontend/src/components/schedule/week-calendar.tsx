@@ -1,22 +1,27 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/typography';
-
+ 
 import { Fonts } from '@/constants/fonts';
 import { week } from './schedule-data';
 import { PURPLE } from './ui';
-
-export function WeekCalendar({ selected, onSelect, review = false }: {
+ 
+type Day = { label: string; date: number; load: number };
+ 
+export function WeekCalendar({ selected, onSelect, review = false, days = week, monthName = 'October', year = 2026 }: {
   selected: number;
   onSelect: (date: number) => void;
   review?: boolean;
+  days?: Day[]; // leave out to use the sample week
+  monthName?: string;
+  year?: number;
 }) {
   return (
     <View style={styles.week}>
-      {week.map((day) => (
+      {days.map((day) => (
         <Pressable
           key={day.date}
           accessibilityRole="button"
-          accessibilityLabel={`October ${day.date}, 2026`}
+          accessibilityLabel={`${monthName} ${day.date}, ${year}`}
           accessibilityState={{ selected: selected === day.date }}
           onPress={() => onSelect(day.date)}
           style={styles.day}>
@@ -35,7 +40,7 @@ export function WeekCalendar({ selected, onSelect, review = false }: {
     </View>
   );
 }
-
+ 
 const styles = StyleSheet.create({
   week: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30 },
   day: { alignItems: 'center', gap: 8, minWidth: 33 },
@@ -46,3 +51,4 @@ const styles = StyleSheet.create({
   number: { fontFamily: Fonts.bold, fontSize: 16, lineHeight: 20, color: '#000000', includeFontPadding: false },
   underline: { position: 'absolute', bottom: 3, width: 18, height: 1, backgroundColor: PURPLE },
 });
+ 
