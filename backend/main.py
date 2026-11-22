@@ -1,17 +1,44 @@
+import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 load_dotenv()
 
-from auth import CurrentUser  # noqa: E402  (needs the .env values loaded first)
+from auth import CurrentUser  # noqa: E402
+from db import client, db  # noqa: E402
+from jobs import router as jobs_router  # noqa: E402
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await client.admin.command("ping")  # fail fast if MONGODB_URI is wrong
+    await db["jobs"].create_index("teamId")
+    yield
+    await client.close()
+
+
+app = FastAPI(lifespan=lifespan)
+
+# only Expo web build needs CORS, native apps ignore this
+web_origins = [o.strip() for o in os.environ.get("CLERK_AUTHORIZED_PARTIES", "").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=web_origins, allow_methods=["*"], allow_headers=["*"])
+
+app.include_router(jobs_router)
 
 
 @app.get("/", response_class=PlainTextResponse)
 def root() -> str:
     return "hello from schedoro backend"
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    await client.admin.command("ping")
+    return {"status": "ok", "database": "ok"}
 
 
 @app.get("/me")

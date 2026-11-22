@@ -6,8 +6,11 @@ A small [FastAPI](https://fastapi.tiangolo.com/) server for the Schedoro app. Us
 
 | File | What it does |
 | --- | --- |
-| `main.py` | Creates the app and defines the routes. |
+| `main.py` | Creates the app, connects to MongoDB on startup, registers the routes. |
 | `auth.py` | Checks Clerk tokens. Gives routes the signed-in user's ID. |
+| `db.py` | MongoDB Atlas connection - gives routes the database. |
+| `models.py` | Request/response shapes (Job, Location, AvailabilityWindow). |
+| `jobs.py` | Job routes → `JobService` -> `JobRepository` (the `jobs` collection). |
 | `requirements.txt` | Python dependencies. |
 | `.env.example` | Template for `.env`, which holds the backend's secrets. |
 
@@ -32,7 +35,12 @@ On Windows, use `.venv\Scripts\` instead of `.venv/bin/`.
 | Variable | Required | What it's for |
 | --- | --- | --- |
 | `CLERK_SECRET_KEY` | Yes | Lets the backend check Clerk tokens. Find it under Clerk Dashboard → API keys. |
-| `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated web origins allowed to call the API, e.g. `http://localhost:8081`. Only needed for the Expo web build. |
+| `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated web origins allowed to call the API, e.g. `http://localhost:8081`. Only needed for the Expo web build. Also used for CORS. |
+| `MONGODB_URI` | Yes | MongoDB Atlas connection string |
+| `MONGODB_DB` | No | MongoDB Database name. Defaults to `schedoro`. |
+
+On Render, add the variables under Environment.
+In MongoDb Atlas -> Network Access, allow `0.0.0.0/0` because Render's outbound IPs change
 
 Never commit `.env`; it's already in `.gitignore`.
 
@@ -41,7 +49,26 @@ Never commit `.env`; it's already in `.gitignore`.
 | Method | Path | Sign-in needed | Returns |
 | --- | --- | --- | --- |
 | GET | `/` | No | `hello from schedoro backend` |
+| GET | `/health` | No | `{"status": "ok", "database": "ok"}` if MongoDB is reachable |
 | GET | `/me` | Yes | `{"user_id": "user_..."}`, the caller's Clerk user ID |
+| GET | `/teams/{team_id}/jobs` | Yes | The team's jobs, newest first |
+| POST | `/teams/{team_id}/jobs` | Yes | The created job (201) |
+| GET | `/teams/{team_id}/jobs/{job_id}` | Yes | One job or 404 |
+| PUT | `/teams/{team_id}/jobs/{job_id}` | Yes | The updated job or 404 |
+| DELETE | `/teams/{team_id}/jobs/{job_id}` | Yes | 204 or 404 |
+
+Example job body:
+
+```json
+{
+  "name": "Example House Cleaning",
+  "description": "Weekly clean",
+  "location": { "address": "99 Oak Rd., Oakville, ON" },
+  "estimatedDurationMinutes": 180,
+  "requiredSkills": ["Regular cleaning"],
+  "availability": [{ "dayOfWeek": "Monday", "startTime": "08:00", "endTime": "17:00" }]
+}
+```
 
 A protected route returns `401 Not signed in` if the token is missing or invalid.
 
