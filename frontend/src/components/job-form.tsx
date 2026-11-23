@@ -5,15 +5,16 @@ import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable,
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AvailabilityField } from '@/components/availability-editor';
 import JobSelectionSheet from '@/components/job-selection-sheet';
 import SkillPicker from '@/components/skill-picker';
 import { errorMessage, type Job, jobTemplates, useJobs } from '@/context/jobs';
+import type { WorkHours } from '@/context/members';
 
 import { Fonts } from '@/constants/fonts';
 
 const durationOptions = ['30 min', '1h', '1.5h', '2h', '2.5h', '3h', '4h', '5h', '6h', '7h', '8h'];
-const availabilityOptions = ['Weekdays, 9:00 AM – 5:00 PM', 'Weekday mornings, 9:00 AM – 12:00 PM', 'Weekday afternoons, 12:00 PM – 5:00 PM', 'Weekends, 9:00 AM – 5:00 PM'];
-type Picker = 'name' | 'skills' | 'duration' | 'location' | 'availability';
+type Picker = 'name' | 'skills' | 'duration' | 'location';
 
 function Chevron({ down = false }: { down?: boolean }) {
   return <View aria-hidden style={[styles.chevron, down && styles.chevronDown]} />;
@@ -41,7 +42,7 @@ export default function JobForm({ job }: { job?: Job }) {
   const [skills, setSkills] = useState<string[]>(job?.skills ?? []);
   const [duration, setDuration] = useState(job?.duration ?? '');
   const [location, setLocation] = useState(job?.location ?? '');
-  const [availability, setAvailability] = useState<string[]>(job?.availability ?? []);
+  const [availability, setAvailability] = useState<WorkHours[]>(job?.availability ?? []);
   const [picker, setPicker] = useState<Picker | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,10 +56,6 @@ export default function JobForm({ job }: { job?: Job }) {
   function openPicker(value: Picker) {
     Keyboard.dismiss();
     setPicker(value);
-  }
-
-  function toggle(values: string[], value: string) {
-    return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
   }
 
   async function saveJob() {
@@ -110,7 +107,11 @@ export default function JobForm({ job }: { job?: Job }) {
             <SelectionField label="Skills required" placeholder="Select skills" value={skills.join(', ')} onPress={() => openPicker('skills')} />
             <SelectionField label="Duration*" placeholder="Select duration" value={duration} onPress={() => openPicker('duration')} error={submitted && !duration ? 'Select a duration.' : undefined} />
             <SelectionField label="Location*" placeholder="Add location" value={location} onPress={() => openPicker('location')} error={submitted && !location.trim() ? 'Enter a location.' : undefined} />
-            <SelectionField label="Availability" placeholder="Select time ranges" value={availability.join('; ')} onPress={() => openPicker('availability')} />
+            <View style={styles.field}>
+              <Text style={styles.label}>Availability</Text>
+              {/* same picker as member availability, it only changes the form until you save the job */}
+              <AvailabilityField windows={availability} description="When can this job be done?" onSave={async (windows) => { setAvailability(windows); return null; }} />
+            </View>
 
             {saveError && <Text accessibilityRole="alert" style={[styles.error, styles.saveError]}>{saveError}</Text>}
 
@@ -143,7 +144,6 @@ export default function JobForm({ job }: { job?: Job }) {
       )}
       {picker === 'skills' && <SkillPicker title="Skills required" selected={skills} onChange={setSkills} onClose={() => setPicker(null)} />}
       {picker === 'duration' && <JobSelectionSheet title="Duration" options={durationOptions} selected={[duration]} onSelect={(value) => { setDuration(value); setPicker(null); }} onClose={() => setPicker(null)} />}
-      {picker === 'availability' && <JobSelectionSheet title="Availability" options={[...new Set([...availabilityOptions, ...availability])]} selected={availability} multiple onSelect={(value) => setAvailability((current) => toggle(current, value))} onClose={() => setPicker(null)} />}
       {picker === 'location' && (
         <JobSelectionSheet title="Location" onClose={() => setPicker(null)}>
           <TextInput autoFocus accessibilityLabel="Job location" placeholder="Enter an address or location" placeholderTextColor="#999999" value={location} onChangeText={setLocation} style={styles.locationInput} autoComplete="street-address" returnKeyType="done" onSubmitEditing={() => setPicker(null)} />

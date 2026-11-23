@@ -14,6 +14,7 @@ export type TeamMember = {
   email: string;
   role: MemberRole;
   location: string;
+  phone: string;
   skills: string[];
   availability: WorkHours[];
   userId: string | null; // their Clerk user ID, null until they've joined
@@ -22,7 +23,12 @@ export type TeamMember = {
   initialsColor: string;
 };
 
-export type MemberChanges = Partial<Pick<TeamMember, 'fullName' | 'role' | 'location' | 'skills' | 'availability'>>;
+export type MemberChanges = Partial<Pick<TeamMember, 'fullName' | 'role' | 'location' | 'phone' | 'skills' | 'availability'>>;
+
+// same rule as the backend (members.py): owners manage everyone, managers manage workers
+export function canManage(myRole: MemberRole | undefined, theirRole: MemberRole) {
+  return myRole === 'owner' || (myRole === 'manager' && theirRole === 'worker');
+}
 
 // shapes from backend/models.py
 type ApiMemberIn = {
@@ -30,6 +36,7 @@ type ApiMemberIn = {
   email: string;
   role: MemberRole;
   location: ApiLocation | null;
+  phone?: string;
   skills: string[];
   availability: ApiWindow[];
   maxWeeklyHours: number | null;
@@ -61,6 +68,28 @@ export function hoursBetween(start: string, end: string) {
   return (minutes(end) - minutes(start)) / 60;
 }
 
+// "Mon ⑧, Tue ⑧" with the hours added up per day, for the one-line summary on the forms
+export function availabilitySummary(windows: WorkHours[]) {
+  const totals = new Map<string, number>();
+  for (const w of windows) totals.set(w.day, (totals.get(w.day) ?? 0) + hoursBetween(w.start, w.end));
+  return weekdays.filter((day) => totals.has(day)).map((day) => {
+    const count = totals.get(day)!;
+    return `${day} ${Number.isInteger(count) && count >= 1 && count <= 20 ? String.fromCodePoint(0x245f + count) : count}`;
+  }).join(', ');
+}
+
+// the api's { dayOfWeek: 'Monday', startTime, endTime } <-> the app's { day: 'Mon', start, end }.
+// jobs use these too so both pickers work the same way
+export function windowsFromApi(windows: ApiWindow[]): WorkHours[] {
+  return weekdays.flatMap((day) => windows
+    .filter((window) => window.dayOfWeek === dayNames[day])
+    .map((window) => ({ day, start: window.startTime, end: window.endTime })));
+}
+
+export function windowsToApi(windows: WorkHours[]): ApiWindow[] {
+  return windows.map(({ day, start, end }) => ({ dayOfWeek: dayNames[day], startTime: start, endTime: end }));
+}
+
 function fromApi(member: ApiMember): TeamMember {
   return {
     id: member.memberId,
@@ -68,10 +97,9 @@ function fromApi(member: ApiMember): TeamMember {
     email: member.email,
     role: member.role,
     location: member.location?.address ?? '',
+    phone: member.phone ?? '',
     skills: member.skills,
-    availability: weekdays.flatMap((day) => member.availability
-      .filter((window) => window.dayOfWeek === dayNames[day])
-      .map((window) => ({ day, start: window.startTime, end: window.endTime }))),
+    availability: windowsFromApi(member.availability),
     userId: member.userId,
     invited: !member.userId,
     ...colorsFor(member.memberId),
@@ -86,10 +114,9 @@ function toApi(member: ApiMember, changes: MemberChanges): ApiMemberIn {
     email: member.email,
     role: changes.role ?? member.role,
     location: !address ? null : member.location?.address === address ? member.location : { address },
+    phone: (changes.phone ?? member.phone ?? '').trim(),
     skills: changes.skills ?? member.skills,
-    availability: changes.availability
-      ? changes.availability.map(({ day, start, end }) => ({ dayOfWeek: dayNames[day], startTime: start, endTime: end }))
-      : member.availability,
+    availability: changes.availability ? windowsToApi(changes.availability) : member.availability,
     maxWeeklyHours: member.maxWeeklyHours,
   };
 }

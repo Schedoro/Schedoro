@@ -22,6 +22,11 @@ from models import Member, MemberIn, Role
 
 MANAGERS = (Role.owner, Role.manager)
 
+
+def can_manage(caller: Role, target: Role) -> bool:
+    """Owners manage everyone, managers manage workers. Anyone can still edit their own profile."""
+    return caller == Role.owner or (caller == Role.manager and target == Role.worker)
+
 logger = logging.getLogger("uvicorn.error")
 
 
@@ -155,14 +160,15 @@ class MemberService:
 
     async def update_member(self, team_id: str, member_id: str, member: MemberIn, caller: Role, caller_id: str) -> Member:
         current = _found(await self.repository.get(team_id, member_id))
-        if caller not in MANAGERS:
-            # workers can edit their own profile (name, skills, availability, location), nothing else
-            if current.userId != caller_id:
-                _forbidden("Only owners and managers can make changes here.")
-            if member.role != current.role:
-                _forbidden("Only owners and managers can change roles.")
-        if caller != Role.owner and Role.owner in (current.role, member.role):
-            _forbidden("Only the owner can change owners.")
+        if current.userId is not None and current.userId == caller_id:
+            # your own profile: name, phone, location, skills, availability. not your role (unless you're the owner)
+            if member.role != current.role and caller != Role.owner:
+                _forbidden("You can’t change your own role.")
+        else:
+            if not can_manage(caller, current.role):
+                _forbidden("Managers can only edit workers." if caller == Role.manager else "You can only edit your own profile.")
+            if member.role != current.role and not can_manage(caller, member.role):
+                _forbidden("Managers can only give people the worker role.")
         if member.email != current.email:
             _bad_request("The email can’t be changed. Remove them and invite the new email instead.")
         if current.role == Role.owner and member.role != Role.owner:
@@ -174,9 +180,9 @@ class MemberService:
 
     async def remove_member(self, team_id: str, member_id: str, caller: Role) -> None:
         current = _found(await self.repository.get(team_id, member_id))
+        if not can_manage(caller, current.role):
+            _forbidden("Managers can only remove workers.")
         if current.role == Role.owner:
-            if caller != Role.owner:
-                _forbidden("Only the owner can remove an owner.")
             await self._keep_an_owner(team_id)
         doc = _found(await self.repository.delete(team_id, member_id))
         if doc.get("invitationId") and not doc.get("userId"):

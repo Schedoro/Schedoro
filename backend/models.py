@@ -64,6 +64,7 @@ class MemberIn(BaseModel):
     email: str = Field(pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$", max_length=254)
     role: Role = Role.worker
     location: Location | None = None
+    phone: str = Field(default="", max_length=30, pattern=r"^[0-9+()\-.\s]*$")
     skills: list[str] = []
     availability: list[AvailabilityWindow] = []
     maxWeeklyHours: float | None = Field(default=None, gt=0, le=7 * 24)

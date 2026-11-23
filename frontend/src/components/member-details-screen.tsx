@@ -1,42 +1,47 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { useAuth } from '@clerk/expo';
+import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
+import { AvailabilityField } from '@/components/availability-editor';
 import { SkillsField } from '@/components/skill-picker';
-import { hoursBetween, type MemberChanges, type TeamMember, useMembers, weekdays } from '@/context/members';
+import { canManage, type MemberChanges, type TeamMember, useMembers } from '@/context/members';
+import { useProfile } from '@/context/profile';
 import { useTeams } from '@/context/teams';
 import { errorMessage } from '@/lib/api';
 
 import { Fonts } from '@/constants/fonts';
 
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/; // same check as the backend
 const roleLabels = { owner: 'Owner', manager: 'Manager', worker: 'Worker' } as const;
-type Sheet = 'role' | 'availability' | 'remove' | 'remind-availability' | 'remind-skills' | null;
+type Sheet = 'role' | 'remove' | 'remind-availability' | 'remind-skills' | null;
 
-type Props = { member: TeamMember; onRemoving: (member?: TeamMember) => void };
+// backTo is where the arrow goes when there's no history, profile passes '/more'
+type Props = { member: TeamMember; onRemoving?: (member?: TeamMember) => void; backTo?: Href };
 
-export default function MemberDetailsScreen({ member, onRemoving }: Props) {
-  const { updateMember, removeMember } = useMembers();
-  const { saveReminderDraft, selectedTeam, teams } = useTeams();
-  const teamId = (selectedTeam ?? teams[0])?.id;
+export default function MemberDetailsScreen({ member, onRemoving, backTo = '/team' }: Props) {
+  const { userId } = useAuth();
+  const { saveName: saveAccountName } = useProfile();
+  const { updateMember, removeMember, refresh: refreshMembers } = useMembers();
+  const { saveReminderDraft, selectedTeam, teams, refresh: refreshTeams } = useTeams();
+  const team = selectedTeam ?? teams[0];
+  const teamId = team?.id;
+  // your own page doubles as the profile: no role, no remind/remove
+  const isSelf = !!member.userId && member.userId === userId;
+  // owners can edit anyone, managers can edit workers, everyone can edit themselves
+  const canEdit = isSelf || canManage(team?.myRole, member.role);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [name, setName] = useState(member.fullName);
   const [location, setLocation] = useState(member.location);
+  const [phone, setPhone] = useState(member.phone);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [times, setTimes] = useState<Record<string, { start: string; end: string }>>({});
-  const [timesError, setTimesError] = useState('');
-  const availability = member.availability.map(({ day, start, end }) => {
-    const count = hoursBetween(start, end);
-    return `${day} ${Number.isInteger(count) && count >= 1 && count <= 20 ? String.fromCodePoint(0x245f + count) : count}`;
-  }).join(', ');
 
   // the bottom buttons take most of the screen with the keyboard up, so hide them while typing
   useEffect(() => {
@@ -61,9 +66,23 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
     }
   }
 
+  // for the availability editor, which shows the error itself
+  async function saveOrError(changes: MemberChanges) {
+    setSaving(true);
+    setError('');
+    try {
+      await updateMember(member.id, changes);
+      return null;
+    } catch (e) {
+      return errorMessage(e);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function goBack() {
     if (router.canGoBack()) router.back();
-    else router.replace('/team');
+    else router.replace(backTo);
   }
 
   function openSheet(value: Sheet) {
@@ -71,51 +90,54 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
     setSheet(value);
   }
 
-  function editAvailability() {
-    setTimes(Object.fromEntries(weekdays.map((day) => {
-      const hours = member.availability.find((item) => item.day === day);
-      return [day, { start: hours?.start ?? '', end: hours?.end ?? '' }];
-    })));
-    setTimesError('');
-    openSheet('availability');
-  }
-
-  function setTime(day: string, key: 'start' | 'end', value: string) {
-    setTimes((current) => ({ ...current, [day]: { ...current[day], [key]: value.trim() } }));
-    setTimesError('');
-  }
-
-  async function saveAvailability() {
-    const filled = weekdays.filter((day) => times[day]?.start || times[day]?.end);
-    const invalid = filled.some((day) => !HHMM.test(times[day].start) || !HHMM.test(times[day].end) || times[day].start >= times[day].end);
-    if (invalid) {
-      setTimesError('Use 24-hour times like 09:00 and 17:00, with the start before the end. Leave both empty for days off.');
+  function saveName() {
+    const trimmed = name.trim();
+    if (trimmed === member.fullName) return;
+    if (!trimmed) {
+      setName(member.fullName);
+      setError('Enter a name.');
       return;
     }
-    Keyboard.dismiss();
-    if (await save({ availability: filled.map((day) => ({ day, ...times[day] })) })) setSheet(null);
+    if (isSelf) void saveOwnName(trimmed);
+    else void save({ fullName: trimmed });
   }
 
-
-  function saveName() {
-    if (name.trim() !== member.fullName) void save({ fullName: name.trim() });
+  // your name lives on your account, the backend copies it onto your team records when teams load
+  async function saveOwnName(fullName: string) {
+    setSaving(true);
+    setError('');
+    setStatus('');
+    try {
+      await saveAccountName(fullName);
+      await refreshTeams();
+      await refreshMembers();
+      setStatus('Name saved.');
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   function saveLocation() {
     if (location.trim() !== member.location) void save({ location: location.trim() });
   }
 
+  function savePhone() {
+    if (phone.trim() !== member.phone) void save({ phone: phone.trim() });
+  }
+
   async function confirmRemove() {
     if (removing) return;
     setRemoving(true);
     setError('');
-    onRemoving(member);
+    onRemoving?.(member);
     try {
       await removeMember(member.id);
       setSheet(null);
       goBack();
     } catch (e) {
-      onRemoving(undefined);
+      onRemoving?.(undefined);
       setRemoving(false);
       setError(errorMessage(e));
     }
@@ -125,7 +147,7 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back to team" onPress={goBack} style={styles.backButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={goBack} style={styles.backButton}>
             <Text aria-hidden style={styles.backArrow}>←</Text>
           </Pressable>
           <Text accessibilityRole="header" style={styles.title}>{member.fullName || member.email}</Text>
@@ -136,29 +158,39 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
           <View style={styles.form}>
             <View style={styles.field}>
               <Text style={styles.label}>Name</Text>
-              <TextInput accessibilityLabel="Member name" value={name} placeholder="Add name" placeholderTextColor="#999999" editable={!saving} maxLength={100} autoCapitalize="words" onChangeText={setName} onEndEditing={saveName} returnKeyType="done" style={styles.input} />
+              {canEdit
+                ? <TextInput accessibilityLabel="Member name" value={name} placeholder="Add name" placeholderTextColor="#999999" editable={!saving} maxLength={100} autoCapitalize="words" onChangeText={setName} onEndEditing={saveName} returnKeyType="done" style={styles.input} />
+                : <ReadOnly value={member.fullName} />}
             </View>
-            <View style={styles.field}>
+            {!isSelf && <View style={styles.field}>
               <Text style={styles.label}>Role</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={`Role: ${roleLabels[member.role]}`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => openSheet('role')} style={styles.inputRow}>
-                <Text style={[styles.value, styles.fieldValue]}>{roleLabels[member.role]}</Text>
-                <View aria-hidden style={styles.chevron} />
-              </Pressable>
-            </View>
+              {/* managers can only give the worker role, so only owners get the picker */}
+              {team?.myRole === 'owner' ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={`Role: ${roleLabels[member.role]}`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => openSheet('role')} style={styles.inputRow}>
+                  <Text style={[styles.value, styles.fieldValue]}>{roleLabels[member.role]}</Text>
+                  <View aria-hidden style={styles.chevron} />
+                </Pressable>
+              ) : <ReadOnly value={roleLabels[member.role]} />}
+            </View>}
             <View style={styles.field}>
               <Text style={styles.label}>Location</Text>
-              <TextInput accessibilityLabel="Member location" value={location} placeholder="Add location" placeholderTextColor="#999999" editable={!saving} onChangeText={setLocation} onEndEditing={saveLocation} returnKeyType="done" style={styles.input} />
+              {canEdit
+                ? <TextInput accessibilityLabel="Member location" value={location} placeholder="Add location" placeholderTextColor="#999999" editable={!saving} onChangeText={setLocation} onEndEditing={saveLocation} returnKeyType="done" style={styles.input} />
+                : <ReadOnly value={member.location} />}
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>Phone</Text>
+              {canEdit
+                ? <TextInput accessibilityLabel="Member phone" value={phone} placeholder="Add phone" placeholderTextColor="#999999" editable={!saving} keyboardType="phone-pad" textContentType="telephoneNumber" maxLength={30} onChangeText={setPhone} onEndEditing={savePhone} returnKeyType="done" style={styles.input} />
+                : <ReadOnly value={member.phone} />}
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Availability</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={`Edit availability: ${member.availability.map((item) => `${item.day} ${item.start} to ${item.end}`).join(', ') || 'Not set'}`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={editAvailability} style={styles.inputRow}>
-                <Text numberOfLines={1} style={[styles.value, styles.fieldValue]}>{availability || 'Add availability'}</Text>
-                <Image source={require('@/assets/images/tabIcons/DotsThreeIcon.svg')} tintColor="#000000" style={styles.smallIcon} />
-              </Pressable>
+              <AvailabilityField windows={member.availability} readOnly={!canEdit} disabled={saving} onSave={(availability) => saveOrError({ availability })} />
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Skills</Text>
-              <SkillsField skills={member.skills} disabled={saving} onSave={(skills) => { void save({ skills }); }} />
+              <SkillsField skills={member.skills} readOnly={!canEdit} disabled={saving} onSave={(skills) => { void save({ skills }); }} />
             </View>
 
             {saving && (
@@ -172,7 +204,7 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
           </View>
         </ScrollView>
 
-        {!keyboardOpen && <View style={styles.actions}>
+        {canEdit && !isSelf && !keyboardOpen && <View style={styles.actions}>
           {(['availability', 'skills'] as const).map((kind) => (
             <Pressable key={kind} accessibilityRole="button" onPress={() => openSheet(kind === 'availability' ? 'remind-availability' : 'remind-skills')} style={({ pressed }) => [styles.actionButton, styles.outlinedButton, pressed && styles.pressed]}>
               <Image source={require('@/assets/images/SendIcon.svg')} tintColor="#000000" style={styles.smallIcon} />
@@ -192,25 +224,6 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
           setSheet(null);
           if (role !== member.role) void save({ role });
         }} />
-      )}
-      {sheet === 'availability' && (
-        <JobSelectionSheet title="Availability" onClose={() => { if (!saving) setSheet(null); }}>
-          <Text style={styles.sheetText}>Working hours each day, in 24-hour time. Leave a day empty if they’re off.</Text>
-          {weekdays.map((day) => (
-            <View key={day} style={styles.hoursRow}>
-              <Text style={[styles.value, styles.fieldValue]}>{day}</Text>
-              <TextInput accessibilityLabel={`${day} start time`} placeholder="09:00" placeholderTextColor="#999999" keyboardType="numbers-and-punctuation" maxLength={5} value={times[day]?.start} onChangeText={(value) => setTime(day, 'start', value)} style={styles.hoursInput} />
-              <Text aria-hidden style={styles.sheetText}>–</Text>
-              <TextInput accessibilityLabel={`${day} end time`} placeholder="17:00" placeholderTextColor="#999999" keyboardType="numbers-and-punctuation" maxLength={5} value={times[day]?.end} onChangeText={(value) => setTime(day, 'end', value)} style={styles.hoursInput} />
-            </View>
-          ))}
-          {timesError ? <Text accessibilityRole="alert" style={styles.error}>{timesError}</Text> : null}
-          {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={saveAvailability} style={[styles.actionButton, styles.darkButton, saving && styles.pressed]}>
-            {saving && <ActivityIndicator size="small" color="#FFFFFF" />}
-            <Text style={[styles.actionLabel, styles.whiteLabel]}>{saving ? 'Saving…' : 'Save availability'}</Text>
-          </Pressable>
-        </JobSelectionSheet>
       )}
       {(sheet === 'remind-availability' || sheet === 'remind-skills') && (
         <JobSelectionSheet title="Reminder" onClose={() => setSheet(null)}>
@@ -238,6 +251,11 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
       )}
     </SafeAreaView>
   );
+}
+
+// plain text, like the "Member (as worker)" frame in Figma
+function ReadOnly({ value }: { value: string }) {
+  return <Text style={[styles.value, !value && styles.placeholderText]}>{value || 'Not set'}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -269,9 +287,8 @@ const styles = StyleSheet.create({
   savingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   saveError: { color: '#C93838', fontSize: 14, lineHeight: 20 },
   sheetText: { color: '#505050', fontSize: 16, lineHeight: 22 },
-  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  hoursInput: { width: 72, minHeight: 44, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, padding: 10, color: '#000000', fontSize: 16, textAlign: 'center' },
   error: { color: '#C93838', fontSize: 13 },
+  placeholderText: { color: '#999999' },
   confirmActions: { flexDirection: 'row', gap: 12 },
   confirmButton: { flex: 1 },
   pressed: { opacity: 0.7 },

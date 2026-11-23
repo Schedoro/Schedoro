@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { describeWindow, sortWindows } from '@/components/availability-editor';
 import JobNotFound, { JobLoading } from '@/components/job-not-found';
 import JobSelectionSheet from '@/components/job-selection-sheet';
 import { errorMessage, type Job, useJobs } from '@/context/jobs';
@@ -99,7 +100,7 @@ export default function JobDetailsScreen() {
             <Detail label="Skills required" value={job.skills.join(', ')} />
             <Detail label="Duration" value={formatDuration(job.duration)} />
             <Detail label="Location" value={job.location} />
-            <Detail label="Availability" value={job.availability.join(', ')} />
+            <Detail label="Availability" value={sortWindows(job.availability).map(describeWindow).join('\n')} />
           </View>
 
           <View style={styles.actions}>

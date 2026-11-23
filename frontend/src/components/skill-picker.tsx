@@ -102,13 +102,19 @@ export default function SkillPicker({ title, selected, onChange, onClose }: Prop
 type FieldProps = {
   skills: string[];
   disabled?: boolean;
+  readOnly?: boolean;
   onSave: (skills: string[]) => void;
 };
 
 // the Skills list from the member screen design: a row per skill with a minus, then "Add skill",
 // which opens the picker. changes are saved once when the picker closes, not on every tap
-export function SkillsField({ skills, disabled, onSave }: FieldProps) {
+export function SkillsField({ skills, disabled, readOnly, onSave }: FieldProps) {
   const [draft, setDraft] = useState<string[] | null>(null);
+
+  if (readOnly) {
+    // plain list like the "Member (as worker)" frame in Figma
+    return <Text style={skills.length ? styles.rowValue : styles.rowPlaceholder}>{skills.join(', ') || 'No skills yet'}</Text>;
+  }
 
   function close() {
     const changed = draft && (draft.length !== skills.length || draft.some((skill, i) => skill !== skills[i]));
