@@ -14,7 +14,13 @@ export type AppointmentInput = {
   notes: string;
 };
  
-export type Appointment = AppointmentInput & { appointmentId: string; teamId: string; status: AppointmentStatus };
+export type Appointment = AppointmentInput & { 
+  appointmentId: string;
+  teamId: string;
+  status: AppointmentStatus;
+  statusUpdatedBy: string | null;
+  statusUpdatedAt: string | null;
+};
  
 /** Calls the team's backend route and returns the JSON body, or throws an Error with a readable message. */
 export function useTeamRequest() {

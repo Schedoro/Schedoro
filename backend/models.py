@@ -101,7 +101,7 @@ class Team(TeamIn):
     myRole: Role  # the signed-in user's role on this team
 
 
-# ---------- Manual Scheduling: appointments ----------
+# Manual Scheduling: appointments
 class AppointmentStatus(str, Enum):
     Pending = "Pending"
     Scheduled = "Scheduled"
@@ -126,3 +126,5 @@ class Appointment(AppointmentIn):
     appointmentId: str
     teamId: str
     status: AppointmentStatus = AppointmentStatus.Scheduled
+    statusUpdatedBy: str | None = None  # user who last changed the status
+    statusUpdatedAt: datetime | None = None
