@@ -17,6 +17,7 @@ from members import router as members_router  # noqa: E402
 from teams import router as teams_router  # noqa: E402
 from appointments import router as appointments_router  # noqa: E402
 from analytics import router as analytics_router  # noqa: E402
+from schedule import router as schedule_router  # noqa: E402
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,6 +54,7 @@ app.include_router(jobs_router)
 app.include_router(members_router)
 app.include_router(appointments_router)
 app.include_router(analytics_router)
+app.include_router(schedule_router)
 
 
 @app.get("/", response_class=PlainTextResponse)

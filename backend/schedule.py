@@ -1,47 +1,45 @@
 """AI Scheduling: proposed appointments for a week
 
-Proposals aren't saved here, the manager reviews them first.
+Proposals aren't saved here, the manager reviews them first and the app
+saves the accepted ones through the appointments API.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from appointments import AppointmentRepository
 from auth import CurrentUser
 from db import Database
 from jobs import JobRepository
-from models import AvailabilityWindow
+from members import MANAGERS, MemberRepository, require_role
 from scheduling.generator import generate
 from scheduling.validator import Appointment, Member
 
 
-class MemberIn(BaseModel):
-    userId: str
-    skills: list[str] = []
-    availability: list[AvailabilityWindow] = []
-    maxWeeklyHours: float | None = None
+class ProposalRequest(BaseModel):
+    weekStart: date  # any day works and it adjusts to that week's monday
+    jobIds: list[str] | None = None  # leave out to schedule every job on the team
+    memberIds: list[str] | None = None  # leave out to use everyone on the team
 
 
-class AppointmentIn(BaseModel):
+class ProposedAppointment(BaseModel):
     jobId: str
-    assigneeIds: list[str]
+    assigneeIds: list[str]  # memberIds
     start: datetime  # team local time, no offset
     end: datetime
-    status: str = "Scheduled"
 
 
-class ProposalRequest(BaseModel):
-    weekStart: date
-    jobIds: list[str] | None = None  # leave out to schedule every job on the team
-    # TODO: load these from MongoDB once teams and appointments are stored there
-    members: list[MemberIn]
-    existingAppointments: list[AppointmentIn] = []
+class UnscheduledJob(BaseModel):
+    jobId: str
+    reason: str
 
 
 class ProposalResponse(BaseModel):
-    proposals: list[AppointmentIn]
-    unscheduledJobIds: list[str]
+    weekStart: date
+    proposals: list[ProposedAppointment]
+    unscheduled: list[UnscheduledJob]
 
 
 router = APIRouter(prefix="/teams/{team_id}/schedule", tags=["schedule"])
@@ -49,16 +47,24 @@ router = APIRouter(prefix="/teams/{team_id}/schedule", tags=["schedule"])
 
 @router.post("/proposals", response_model=ProposalResponse)
 async def propose_schedule(team_id: str, body: ProposalRequest, user_id: CurrentUser, db: Database):
+    await require_role(db, team_id, user_id, *MANAGERS)
+
+    monday = body.weekStart - timedelta(days=body.weekStart.weekday())
+    week_start = datetime.combine(monday, time.min)
+
     jobs = {job.jobId: job for job in await JobRepository(db).list_for_team(team_id)}
     members = {
-        m.userId: Member(m.userId, m.skills, m.availability, m.maxWeeklyHours)
-        for m in body.members
+        m.memberId: Member(m.memberId, m.skills, m.availability, m.maxWeeklyHours)
+        for m in await MemberRepository(db).list_for_team(team_id)
+        if body.memberIds is None or m.memberId in body.memberIds
     }
-    existing = [Appointment(**a.model_dump()) for a in body.existingAppointments]
+    saved = await AppointmentRepository(db).find_by_date_range(team_id, week_start, week_start + timedelta(days=7))
+    existing = [Appointment(a.jobId, a.assigneeIds, a.start, a.end, a.status.value) for a in saved]
     job_ids = body.jobIds if body.jobIds is not None else list(jobs)
 
-    proposals, unscheduled = generate(job_ids, body.weekStart, existing, jobs, members)
+    proposals, unscheduled = generate(job_ids, monday, existing, jobs, members)
     return ProposalResponse(
-        proposals=[AppointmentIn(**vars(p)) for p in proposals],
-        unscheduledJobIds=unscheduled,
+        weekStart=monday,
+        proposals=[ProposedAppointment(jobId=p.jobId, assigneeIds=p.assigneeIds, start=p.start, end=p.end) for p in proposals],
+        unscheduled=[UnscheduledJob(jobId=job_id, reason=reason) for job_id, reason in unscheduled.items()],
     )

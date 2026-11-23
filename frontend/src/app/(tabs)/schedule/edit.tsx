@@ -1,19 +1,49 @@
 import { Fonts } from '@/constants/fonts';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon, icons } from '@/components/schedule/icons';
-import { appointments, statuses, statusLabels, workers } from '@/components/schedule/schedule-data';
+import { statuses, statusLabels } from '@/components/schedule/schedule-data';
 import { Body, BORDER, Button, Field, InputBox, Screen, ScreenHeader, SelectBox } from '@/components/schedule/ui';
+import { errorMessage, useJobs } from '@/context/jobs';
+import { useMembers } from '@/context/members';
+import { type Appointment, formatDate, formatDuration, formatTime, useAppointmentApi } from '@/lib/appointment-api';
 
+// TODO: save functionality needs an update appointment endpoint. For now this only shows the real appointment
 export default function EditAppointmentScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const appt = appointments.find((a) => a.id === id) ?? appointments[1];
-  const [status, setStatus] = useState(appt.status);
-  const names = workers.filter((w) => appt.workerIds.includes(w.id)).map((w) => w.title);
+  const { getAppointment } = useAppointmentApi();
+  const { jobs } = useJobs();
+  const { members } = useMembers();
+  const [appt, setAppt] = useState<Appointment | null>(null);
+  const [status, setStatus] = useState<Appointment['status']>('Scheduled');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let stale = false;
+    getAppointment(id).then(
+      (a) => { if (!stale) { setAppt(a); setStatus(a.status); } },
+      (e) => { if (!stale) setError(errorMessage(e)); },
+    );
+    return () => { stale = true; };
+  }, [getAppointment, id]);
+
+  if (!appt) {
+    return (
+      <Screen>
+        <ScreenHeader title="Edit Appointment" />
+        <Body>
+          <Text style={error ? styles.error : styles.time}>{error ?? 'Loading…'}</Text>
+        </Body>
+      </Screen>
+    );
+  }
+
+  const job = jobs.find((j) => j.id === appt.jobId);
+  const names = members.filter((m) => appt.assigneeIds.includes(m.id)).map((m) => m.fullName || m.email);
 
   return (
     <Screen>
@@ -21,27 +51,27 @@ export default function EditAppointmentScreen() {
       <Body>
         <View style={{ gap: 12 }}>
           <Field label="Job*">
-            <SelectBox value={appt.job} onPress={() => router.push('/schedule/select-jobs')} />
+            <SelectBox value={job?.title ?? 'Unknown job'} />
           </Field>
           <Field label="Location*">
-            <InputBox icon={icons.mapPin} defaultValue={appt.location} style={styles.faded} />
+            <InputBox icon={icons.mapPin} value={job?.location || '-'} editable={false} style={styles.faded} />
           </Field>
           <Field label="Date & Time*">
             <View style={styles.dateBox}>
               <Icon xml={icons.calendarX} />
               <View>
-                <Text style={styles.date}>Friday, Oct {appt.date}, 2026</Text>
+                <Text style={styles.date}>{formatDate(appt.start)}</Text>
                 <Text style={styles.time}>
-                  {appt.start} - {appt.end} ({appt.duration})
+                  {formatTime(appt.start)} - {formatTime(appt.end)} ({formatDuration(appt.start, appt.end)})
                 </Text>
               </View>
             </View>
           </Field>
           <Field label="Assign workers*" helper={`${names.length} workers selected`}>
-            <SelectBox value={names.join(', ')} onPress={() => router.push('/schedule/select-workers')} />
+            <SelectBox value={names.join(', ')} placeholder="No one assigned" />
           </Field>
           <Field label="Notes">
-            <InputBox defaultValue={appt.notes} />
+            <InputBox defaultValue={appt.notes} placeholder="No notes" />
           </Field>
           <Field label="Status">
             <SelectBox
@@ -70,4 +100,5 @@ const styles = StyleSheet.create({
   },
   date: { fontFamily: Fonts.regular, fontSize: 16, lineHeight: 24, color: '#000000' },
   time: { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 24, color: 'rgba(0,0,0,0.7)' },
+  error: { fontFamily: Fonts.regular, fontSize: 14, color: '#DD3636' },
 });

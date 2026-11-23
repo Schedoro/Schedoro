@@ -15,16 +15,20 @@ export function SelectList({
   searchPlaceholder,
   items,
   allAvatar,
+  initial = null,
+  onApply,
 }: {
   title: string;
   unit: string;
   searchPlaceholder: string;
   items: Item[];
   allAvatar?: ReactNode;
+  initial?: string[] | null; // null means all
+  onApply?: (ids: string[] | null) => void;
 }) {
   const router = useRouter();
-  const [all, setAll] = useState(true);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [all, setAll] = useState(initial === null);
+  const [picked, setPicked] = useState<string[]>(initial ?? []);
   const [search, setSearch] = useState('');
 
   const shown = items.filter((i) => i.title.toLowerCase().includes(search.toLowerCase()));
@@ -64,7 +68,14 @@ export function SelectList({
           ))}
         </View>
 
-        <Button icon={icons.check} label={`Apply (${count} ${unit})`} onPress={() => router.back()} />
+        <Button
+          icon={icons.check}
+          label={`Apply (${count} ${unit})`}
+          onPress={() => {
+            onApply?.(all ? null : picked);
+            router.back();
+          }}
+        />
       </Body>
     </Screen>
   );

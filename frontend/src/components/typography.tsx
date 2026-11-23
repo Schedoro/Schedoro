@@ -1,5 +1,5 @@
 import { createContext, useContext, type ComponentProps } from 'react';
-import { Text as NativeText, TextInput as NativeTextInput } from 'react-native';
+import { Platform, StyleSheet, Text as NativeText, TextInput as NativeTextInput } from 'react-native';
 
 import { Fonts } from '@/constants/fonts';
 
@@ -17,6 +17,27 @@ export function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
   );
 }
 
-export function TextInput({ style, ...props }: ComponentProps<typeof NativeTextInput>) {
-  return <NativeTextInput {...props} style={[defaultFont, style]} />;
+export function TextInput({ style, multiline, ...props }: ComponentProps<typeof NativeTextInput>) {
+  const { lineHeight, ...rest } = StyleSheet.flatten([defaultFont, style]) ?? {};
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+  const padding = num(rest.paddingTop ?? rest.paddingVertical ?? rest.padding) + num(rest.paddingBottom ?? rest.paddingVertical ?? rest.padding);
+
+  // ios pushes single line text down when lineHeight is set, so keep the same height without it.
+  // android adds extra font padding above the text
+  const centered =
+    Platform.OS === 'ios' && !multiline && lineHeight
+      ? { ...rest, minHeight: lineHeight + padding }
+      : { ...rest, lineHeight };
+
+  return (
+    <NativeTextInput
+      {...props}
+      multiline={multiline}
+      style={[centered, !multiline && styles.singleLine]}
+    />
+  );
 }
+
+const styles = StyleSheet.create({
+  singleLine: { textAlignVertical: 'center', includeFontPadding: false },
+});
