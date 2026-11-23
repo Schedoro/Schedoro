@@ -9,6 +9,7 @@ import { WeekCalendar } from '@/components/schedule/week-calendar';
 import { Fonts } from '@/constants/fonts';
 import { errorMessage, useJobs } from '@/context/jobs';
 import { useMembers } from '@/context/members';
+import { useScheduleSelection } from '@/context/schedule-selection';
 import { formatDuration, formatTime, toDateString, useAppointmentApi } from '@/lib/appointment-api';
 import { type ProposedAppointment, type UnscheduledJob, useScheduleApi } from '@/lib/schedule-api';
 
@@ -26,6 +27,7 @@ export default function ScheduleReviewScreen() {
   const { jobs } = useJobs();
   const { members } = useMembers();
   const { proposeSchedule } = useScheduleApi();
+  const { notes } = useScheduleSelection();
   const { createAppointment } = useAppointmentApi();
   const top = useTopPadding();
 
@@ -36,10 +38,11 @@ export default function ScheduleReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let stale = false;
-    proposeSchedule(week ?? toDateString(new Date()), toIds(jobIds), toIds(memberIds)).then(
+    proposeSchedule(week ?? toDateString(new Date()), toIds(jobIds), toIds(memberIds), notes).then(
       (result) => {
         if (stale) return;
         const start = parseDate(result.weekStart);
@@ -47,6 +50,7 @@ export default function ScheduleReviewScreen() {
         setSelected(start.getDate());
         setProposals(result.proposals);
         setUnscheduled(result.unscheduled);
+        setNotice(result.notice);
         setLoading(false);
       },
       (e) => { if (!stale) { setError(errorMessage(e)); setLoading(false); } },
@@ -105,6 +109,7 @@ export default function ScheduleReviewScreen() {
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
         {unscheduled.length > 0 && (
           <View style={styles.note}>
             <View style={styles.noteHeader}>
@@ -139,10 +144,16 @@ export default function ScheduleReviewScreen() {
                   <View style={styles.details}>
                     <View style={styles.line}>
                       <Text style={styles.faded}>{formatDuration(proposal.start, proposal.end)}</Text>
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>AI generated</Text>
-                        <Icon xml={icons.magicWandGreen} size={12} />
-                      </View>
+                      {proposal.source === 'ai' ? (
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>AI generated</Text>
+                          <Icon xml={icons.magicWandGreen} size={12} />
+                        </View>
+                      ) : (
+                        <View style={[styles.badge, styles.basicBadge]}>
+                          <Text style={[styles.badgeText, styles.basicBadgeText]}>Auto filled</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.line}>
                       <Text style={styles.job}>{job?.title ?? 'Unknown job'}</Text>
@@ -197,6 +208,9 @@ const styles = StyleSheet.create({
   faded: { fontSize: 14, lineHeight: 17, color: 'rgba(0,0,0,0.4)' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#E1FFE6', borderRadius: 12 },
   badgeText: { fontSize: 12, lineHeight: 15, color: '#02971B' },
+  basicBadge: { backgroundColor: 'rgba(0,0,0,0.05)' },
+  basicBadgeText: { color: 'rgba(0,0,0,0.6)' },
+  notice: { color: 'rgba(0,0,0,0.6)', fontSize: 14, textAlign: 'center', marginBottom: 12, paddingHorizontal: 16 },
   job: { flex: 1, fontSize: 16, lineHeight: 20, color: '#000000' },
   assignees: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: { width: 31, height: 31, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

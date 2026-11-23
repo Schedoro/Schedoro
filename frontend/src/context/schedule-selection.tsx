@@ -6,12 +6,15 @@ const ScheduleSelectionContext = createContext<{
   setJobIds: (ids: string[] | null) => void;
   memberIds: string[] | null;
   setMemberIds: (ids: string[] | null) => void;
+  notes: string;
+  setNotes: (notes: string) => void;
 } | null>(null);
 
 export function ScheduleSelectionProvider({ children }: { children: ReactNode }) {
   const [jobIds, setJobIds] = useState<string[] | null>(null);
   const [memberIds, setMemberIds] = useState<string[] | null>(null);
-  return <ScheduleSelectionContext.Provider value={{ jobIds, setJobIds, memberIds, setMemberIds }}>{children}</ScheduleSelectionContext.Provider>;
+  const [notes, setNotes] = useState('');
+  return <ScheduleSelectionContext.Provider value={{ jobIds, setJobIds, memberIds, setMemberIds, notes, setNotes }}>{children}</ScheduleSelectionContext.Provider>;
 }
 
 export function useScheduleSelection() {

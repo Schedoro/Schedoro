@@ -21,7 +21,7 @@ export default function GenerateScheduleScreen() {
   const router = useRouter();
   const { jobs } = useJobs();
   const { members } = useMembers();
-  const { jobIds, memberIds } = useScheduleSelection();
+  const { jobIds, memberIds, notes, setNotes } = useScheduleSelection();
   const jobCount = jobIds?.length ?? jobs.length;
   const workerCount = memberIds?.length ?? members.length;
   const [range, setRange] = useState(windows[1]);
@@ -46,7 +46,7 @@ export default function GenerateScheduleScreen() {
             />
           </Field>
           <Field label="Business constraints">
-            <InputBox placeholder="e.g. Prefer more skilled workers for recurring clients..." multiline />
+            <InputBox placeholder="e.g. Prefer more skilled workers for recurring clients..." multiline value={notes} onChangeText={setNotes} />
           </Field>
           <Field label="Jobs to schedule*" helper={`${jobCount} jobs selected`}>
             <SelectBox value={jobIds ? `${jobCount} jobs` : 'All jobs'} onPress={() => router.push('/schedule/select-jobs')} />

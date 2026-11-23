@@ -40,6 +40,8 @@ On Windows, use `.venv\Scripts\` instead of `.venv/bin/`.
 | `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated web origins allowed to call the API, e.g. `http://localhost:8081`. Only needed for the Expo web build. Also used for CORS. |
 | `MONGODB_URI` | Yes | MongoDB Atlas connection string |
 | `MONGODB_DB` | No | MongoDB Database name. Defaults to `schedoro`. |
+| `GEMINI_API_KEY` | No | Google AI Studio key. Without it, schedules come from the basic non-AI scheduler only. |
+| `GEMINI_MODEL` | No | Gemini model to use. Defaults to `gemini-3.8-flash`. |
 
 On Render, add the variables under Environment.
 In MongoDb Atlas -> Network Access, allow `0.0.0.0/0` because Render's outbound IPs change

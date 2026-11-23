@@ -3,3 +3,4 @@ uvicorn
 clerk-backend-api
 python-dotenv
 pymongo>=4.13
+google-genai
