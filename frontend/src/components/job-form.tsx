@@ -6,11 +6,11 @@ import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
+import SkillPicker from '@/components/skill-picker';
 import { errorMessage, type Job, jobTemplates, useJobs } from '@/context/jobs';
 
 import { Fonts } from '@/constants/fonts';
 
-const skillOptions = ['Regular cleaning', 'Deep Cleaning', 'Window cleaning', 'Laundry', 'Organizing'];
 const durationOptions = ['30 min', '1h', '1.5h', '2h', '2.5h', '3h', '4h', '5h', '6h', '7h', '8h'];
 const availabilityOptions = ['Weekdays, 9:00 AM – 5:00 PM', 'Weekday mornings, 9:00 AM – 12:00 PM', 'Weekday afternoons, 12:00 PM – 5:00 PM', 'Weekends, 9:00 AM – 5:00 PM'];
 type Picker = 'name' | 'skills' | 'duration' | 'location' | 'availability';
@@ -141,7 +141,7 @@ export default function JobForm({ job }: { job?: Job }) {
           setName(template.title); setDuration(template.duration); setSkills([template.category]); setPicker(null);
         }} />
       )}
-      {picker === 'skills' && <JobSelectionSheet title="Skills required" options={[...new Set([...skillOptions, ...skills])]} selected={skills} multiple onSelect={(value) => setSkills((current) => toggle(current, value))} onClose={() => setPicker(null)} />}
+      {picker === 'skills' && <SkillPicker title="Skills required" selected={skills} onChange={setSkills} onClose={() => setPicker(null)} />}
       {picker === 'duration' && <JobSelectionSheet title="Duration" options={durationOptions} selected={[duration]} onSelect={(value) => { setDuration(value); setPicker(null); }} onClose={() => setPicker(null)} />}
       {picker === 'availability' && <JobSelectionSheet title="Availability" options={[...new Set([...availabilityOptions, ...availability])]} selected={availability} multiple onSelect={(value) => setAvailability((current) => toggle(current, value))} onClose={() => setPicker(null)} />}
       {picker === 'location' && (

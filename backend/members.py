@@ -99,8 +99,8 @@ class MemberRepository:
             {"userId": None, "email": {"$in": emails}},
             {"$set": {"userId": user_id}, "$unset": {"invitationId": ""}},
         )
-        if name:  # the manager may not have typed a name, use the one from their account
-            await self.collection.update_many({"userId": user_id, "fullName": ""}, {"$set": {"fullName": name}})
+        if name:  # once someone has joined, the name on their account is the one everyone sees
+            await self.collection.update_many({"userId": user_id, "fullName": {"$ne": name}}, {"$set": {"fullName": name}})
         if not result.modified_count:
             # helps tell "invited a different address" apart from "already linked to another account"
             matches = [(doc["teamId"], doc.get("userId")) async for doc in self.collection.find({"email": {"$in": emails}}, {"teamId": 1, "userId": 1})]
@@ -153,8 +153,14 @@ class MemberService:
         await self.repository.set_invitation(added.memberId, invitation_id)
         return added
 
-    async def update_member(self, team_id: str, member_id: str, member: MemberIn, caller: Role) -> Member:
+    async def update_member(self, team_id: str, member_id: str, member: MemberIn, caller: Role, caller_id: str) -> Member:
         current = _found(await self.repository.get(team_id, member_id))
+        if caller not in MANAGERS:
+            # workers can edit their own profile (name, skills, availability, location), nothing else
+            if current.userId != caller_id:
+                _forbidden("Only owners and managers can make changes here.")
+            if member.role != current.role:
+                _forbidden("Only owners and managers can change roles.")
         if caller != Role.owner and Role.owner in (current.role, member.role):
             _forbidden("Only the owner can change owners.")
         if member.email != current.email:
@@ -226,8 +232,8 @@ async def get_member(team_id: str, member_id: str, user_id: CurrentUser, db: Dat
 
 @router.put("/{member_id}", response_model=Member)
 async def update_member(team_id: str, member_id: str, member: MemberIn, user_id: CurrentUser, db: Database):
-    caller = await require_role(db, team_id, user_id, *MANAGERS)
-    return await _service(db).update_member(team_id, member_id, member, caller)
+    caller = await require_role(db, team_id, user_id)  # workers can still edit themselves, see update_member
+    return await _service(db).update_member(team_id, member_id, member, caller, user_id)
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)

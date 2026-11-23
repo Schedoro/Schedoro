@@ -1,26 +1,30 @@
 import { useUser } from '@clerk/expo';
-import { createContext, type ReactNode, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext } from 'react';
 
 type Profile = { fullName: string; email: string };
 
 const ProfileContext = createContext<{
   profile: Profile;
-  saveProfile: (profile: Profile) => void;
-  resetProfile: () => void;
+  saveName: (fullName: string) => Promise<void>;
 } | null>(null);
 
+// name and email come straight from the Clerk account, so they're the same on every device and team
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
-  // Local edits from the Profile screen. Saving them to Clerk is still to do.
-  const [edits, setEdits] = useState<Profile | null>(null);
 
-  const profile: Profile = edits ?? {
+  const profile: Profile = {
     fullName: user?.fullName ?? '',
     email: user?.primaryEmailAddress?.emailAddress ?? '',
   };
 
+  const saveName = useCallback(async (fullName: string) => {
+    if (!user) throw new Error('You’re not signed in.');
+    const [firstName, ...rest] = fullName.trim().split(/\s+/);
+    await user.update({ firstName, lastName: rest.join(' ') });
+  }, [user]);
+
   return (
-    <ProfileContext.Provider value={{ profile, saveProfile: setEdits, resetProfile: () => setEdits(null) }}>
+    <ProfileContext.Provider value={{ profile, saveName }}>
       {children}
     </ProfileContext.Provider>
   );

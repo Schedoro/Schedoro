@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fonts } from '@/constants/fonts';
 
 import { useTeams } from '@/context/teams';
-import { useProfile } from '@/context/profile';
 
 const selectedColor = '#5E5EFD';
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
@@ -26,7 +25,6 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   const [progress] = useState(() => new Animated.Value(0));
   const { height } = useWindowDimensions();
   const { resetTeams } = useTeams();
-  const { resetProfile } = useProfile();
   const { signOut: endSession } = useAuth();
 
   useEffect(() => {
@@ -56,7 +54,6 @@ export default function MoreMenu({ visible, onClose }: { visible: boolean; onClo
   async function signOut() {
     onClose();
     resetTeams();
-    resetProfile();
     // Clearing the session flips the root layout's guards, which return to the login screen.
     await endSession();
   }

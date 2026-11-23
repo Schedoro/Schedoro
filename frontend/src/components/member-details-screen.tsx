@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { type ComponentRef, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import JobSelectionSheet from '@/components/job-selection-sheet';
+import { SkillsField } from '@/components/skill-picker';
 import { hoursBetween, type MemberChanges, type TeamMember, useMembers, weekdays } from '@/context/members';
 import { useTeams } from '@/context/teams';
 import { errorMessage } from '@/lib/api';
@@ -23,12 +24,9 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
   const { saveReminderDraft, selectedTeam, teams } = useTeams();
   const teamId = (selectedTeam ?? teams[0])?.id;
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [newSkill, setNewSkill] = useState('');
   const [name, setName] = useState(member.fullName);
   const [location, setLocation] = useState(member.location);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const scrollToSkills = useRef(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -41,14 +39,10 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
   }).join(', ');
 
   // the bottom buttons take most of the screen with the keyboard up, so hide them while typing
-  // and scroll the skill input into view if that's what was tapped
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
-    const shown = Keyboard.addListener('keyboardDidShow', () => {
-      if (scrollToSkills.current) scrollRef.current?.scrollToEnd({ animated: true });
-    });
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
-    return () => { show.remove(); shown.remove(); hide.remove(); };
+    return () => { show.remove(); hide.remove(); };
   }, []);
 
   // every edit goes straight to the api. controls are disabled while it saves so edits don't overlap
@@ -102,16 +96,6 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
     if (await save({ availability: filled.map((day) => ({ day, ...times[day] })) })) setSheet(null);
   }
 
-  async function addSkill() {
-    const value = newSkill.trim();
-    if (!value) return;
-    Keyboard.dismiss();
-    if (member.skills.some((skill) => skill.toLowerCase() === value.toLowerCase())) {
-      setNewSkill('');
-      return;
-    }
-    if (await save({ skills: [...member.skills, value] })) setNewSkill('');
-  }
 
   function saveName() {
     if (name.trim() !== member.fullName) void save({ fullName: name.trim() });
@@ -148,11 +132,11 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
           <Text style={styles.email}>{member.fullName ? member.email : 'Invited, hasn’t joined yet'}</Text>
         </View>
 
-        <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
           <View style={styles.form}>
             <View style={styles.field}>
               <Text style={styles.label}>Name</Text>
-              <TextInput accessibilityLabel="Member name" value={name} placeholder="Add name" placeholderTextColor="#999999" editable={!saving} maxLength={100} autoCapitalize="words" onFocus={() => { scrollToSkills.current = false; }} onChangeText={setName} onEndEditing={saveName} returnKeyType="done" style={styles.input} />
+              <TextInput accessibilityLabel="Member name" value={name} placeholder="Add name" placeholderTextColor="#999999" editable={!saving} maxLength={100} autoCapitalize="words" onChangeText={setName} onEndEditing={saveName} returnKeyType="done" style={styles.input} />
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Role</Text>
@@ -163,7 +147,7 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Location</Text>
-              <TextInput accessibilityLabel="Member location" value={location} placeholder="Add location" placeholderTextColor="#999999" editable={!saving} onFocus={() => { scrollToSkills.current = false; }} onChangeText={setLocation} onEndEditing={saveLocation} returnKeyType="done" style={styles.input} />
+              <TextInput accessibilityLabel="Member location" value={location} placeholder="Add location" placeholderTextColor="#999999" editable={!saving} onChangeText={setLocation} onEndEditing={saveLocation} returnKeyType="done" style={styles.input} />
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Availability</Text>
@@ -174,20 +158,7 @@ export default function MemberDetailsScreen({ member, onRemoving }: Props) {
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>Skills</Text>
-              {member.skills.map((skill) => (
-                <View key={skill} style={styles.inputRow}>
-                  <Text style={[styles.value, styles.fieldValue]}>{skill}</Text>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${skill}`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => save({ skills: member.skills.filter((item) => item !== skill) })} hitSlop={6} style={styles.iconButton}>
-                    <Text aria-hidden style={styles.minus}>−</Text>
-                  </Pressable>
-                </View>
-              ))}
-              <View style={styles.inputRow}>
-                <TextInput accessibilityLabel="Add skill" placeholder="Add skill" placeholderTextColor="#999999" value={newSkill} editable={!saving} onFocus={() => { scrollToSkills.current = true; }} onChangeText={setNewSkill} returnKeyType="done" onSubmitEditing={addSkill} style={styles.skillInput} />
-                <Pressable accessibilityRole="button" accessibilityLabel="Add skill" disabled={!newSkill.trim() || saving} onPress={addSkill} hitSlop={6} style={styles.iconButton}>
-                  <Text aria-hidden style={styles.plus}>＋</Text>
-                </Pressable>
-              </View>
+              <SkillsField skills={member.skills} disabled={saving} onSave={(skills) => { void save({ skills }); }} />
             </View>
 
             {saving && (
@@ -287,10 +258,6 @@ const styles = StyleSheet.create({
   fieldValue: { flex: 1 },
   chevron: { width: 10, height: 10, borderBottomWidth: 1.5, borderRightWidth: 1.5, borderColor: '#000000', transform: [{ rotate: '45deg' }], marginTop: -4, marginRight: 2 },
   smallIcon: { width: 18, height: 18 },
-  iconButton: { width: 28, minHeight: 38, justifyContent: 'center', alignItems: 'flex-end' },
-  minus: { fontSize: 22, color: '#505050' },
-  plus: { fontSize: 24, color: '#999999' },
-  skillInput: { flex: 1, minWidth: 0, paddingVertical: 8, fontSize: 16, color: '#000000' },
   actions: { flexShrink: 0, width: '100%', maxWidth: 473, alignSelf: 'center', paddingHorizontal: 40, paddingTop: 16, paddingBottom: 24, gap: 12, backgroundColor: '#FFFFFF' },
   actionButton: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   outlinedButton: { borderWidth: 1, borderColor: '#E5E5E5' },

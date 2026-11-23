@@ -1,32 +1,69 @@
-import { type ComponentRef, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useAuth } from '@clerk/expo';
+import { useState } from 'react';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SkillsField } from '@/components/skill-picker';
+import { useMembers } from '@/context/members';
 import { useProfile } from '@/context/profile';
+import { useTeams } from '@/context/teams';
+import { errorMessage } from '@/lib/api';
 
 import { Fonts } from '@/constants/fonts';
 
 export default function ProfileScreen() {
-  const { profile, saveProfile } = useProfile();
-  const [fullName, setFullName] = useState(profile.fullName);
-  const [email, setEmail] = useState(profile.email);
-  const [saved, setSaved] = useState(false);
-  const emailInput = useRef<ComponentRef<typeof TextInput>>(null);
-  const trimmedName = fullName.trim();
-  const trimmedEmail = email.trim();
-  const nameValid = trimmedName.length > 0;
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  const changed = trimmedName !== profile.fullName || trimmedEmail !== profile.email;
-  const canSave = changed && nameValid && emailValid;
+  const { profile, saveName } = useProfile();
+  const { userId } = useAuth();
+  const { selectedTeam, teams, refresh: refreshTeams } = useTeams();
+  const { members, updateMember, refresh: refreshMembers } = useMembers();
+  const team = selectedTeam ?? teams[0];
+  // your member record on this team, which is where skills live
+  const me = members.find((member) => member.userId === userId);
 
-  function save() {
+  const [fullName, setFullName] = useState(profile.fullName);
+  const [savingName, setSavingName] = useState(false);
+  const [savingSkills, setSavingSkills] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+  const trimmedName = fullName.trim();
+  const nameValid = trimmedName.length > 0;
+  const changed = trimmedName !== profile.fullName;
+  const canSave = changed && nameValid && !savingName;
+
+  async function save() {
     if (!canSave) return;
-    saveProfile({ fullName: trimmedName, email: trimmedEmail });
-    setFullName(trimmedName);
-    setEmail(trimmedEmail);
-    setSaved(true);
     Keyboard.dismiss();
+    setSavingName(true);
+    setError('');
+    setStatus('');
+    try {
+      await saveName(trimmedName);
+      // the backend copies your account name onto your team records when the teams list loads
+      await refreshTeams();
+      await refreshMembers();
+      setFullName(trimmedName);
+      setStatus('Name saved.');
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function saveSkills(skills: string[]) {
+    if (!me) return;
+    setSavingSkills(true);
+    setError('');
+    setStatus('');
+    try {
+      await updateMember(me.id, { skills });
+      setStatus('Skills saved.');
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSavingSkills(false);
+    }
   }
 
   return (
@@ -42,13 +79,14 @@ export default function ProfileScreen() {
               <TextInput
                 accessibilityLabel="Full Name"
                 value={fullName}
-                onChangeText={(value) => { setFullName(value); setSaved(false); }}
+                onChangeText={(value) => { setFullName(value); setStatus(''); setError(''); }}
+                editable={!savingName}
                 autoComplete="name"
                 textContentType="name"
                 autoCapitalize="words"
                 autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => emailInput.current?.focus()}
+                returnKeyType="done"
+                onSubmitEditing={save}
                 style={styles.input}
               />
               {changed && !nameValid && <Text accessibilityRole="alert" style={styles.error}>Enter your full name.</Text>}
@@ -56,32 +94,31 @@ export default function ProfileScreen() {
 
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                ref={emailInput}
-                accessibilityLabel="Email"
-                value={email}
-                onChangeText={(value) => { setEmail(value); setSaved(false); }}
-                keyboardType="email-address"
-                autoComplete="email"
-                textContentType="emailAddress"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={save}
-                style={[styles.input, styles.emailInput]}
-              />
-              {changed && !emailValid && <Text accessibilityRole="alert" style={styles.error}>Enter a valid email address.</Text>}
+              {/* changing it means verifying the new address with Clerk, which isn't built yet */}
+              <Text accessibilityLabel={`Email, ${profile.email}`} style={[styles.input, styles.readOnly]}>{profile.email}</Text>
             </View>
 
             <Pressable
               accessibilityRole="button"
-              accessibilityState={{ disabled: !canSave }}
+              accessibilityState={{ disabled: !canSave, busy: savingName }}
               disabled={!canSave}
               onPress={save}
               style={({ pressed }) => [styles.saveButton, !canSave && styles.disabledButton, pressed && styles.pressed]}>
-              <Text style={styles.saveLabel}>Save</Text>
+              {savingName && <ActivityIndicator size="small" color="#FFFFFF" />}
+              <Text style={styles.saveLabel}>{savingName ? 'Saving…' : 'Save'}</Text>
             </Pressable>
-            {saved && <Text accessibilityLiveRegion="polite" style={styles.savedText}>Profile saved.</Text>}
+
+            {me && team && (
+              <View style={[styles.field, styles.skills]}>
+                <Text style={styles.label}>Skills</Text>
+                <Text style={styles.helper}>For {team.name}. Managers use these when assigning jobs.</Text>
+                <SkillsField skills={me.skills} disabled={savingSkills} onSave={saveSkills} />
+              </View>
+            )}
+
+            {savingSkills && <Text style={styles.status}>Saving skills…</Text>}
+            {error ? <Text accessibilityRole="alert" style={[styles.error, styles.centered]}>{error}</Text> : null}
+            {status ? <Text accessibilityLiveRegion="polite" style={styles.status}>{status}</Text> : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -96,13 +133,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.8, color: '#000000', textAlign: 'center', marginBottom: 12 },
   description: { fontSize: 16, lineHeight: 20, letterSpacing: -0.3, color: '#505050', textAlign: 'center', marginBottom: 6 },
   field: { gap: 6, marginBottom: 12 },
+  skills: { marginTop: 32 },
   label: { fontSize: 16, lineHeight: 20, letterSpacing: -0.3, color: '#999999' },
+  helper: { fontSize: 14, lineHeight: 20, color: '#505050' },
   input: { minHeight: 40, borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 16, lineHeight: 22, color: '#000000', letterSpacing: -0.3 },
-  emailInput: { color: '#999999' },
-  saveButton: { minHeight: 44, marginTop: 20, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#171717' },
+  readOnly: { color: '#999999' },
+  saveButton: { minHeight: 44, marginTop: 20, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#171717' },
   disabledButton: { backgroundColor: '#A3A3A3' },
   saveLabel: { color: '#FFFFFF', fontSize: 16, lineHeight: 24 },
-  savedText: { color: '#505050', fontSize: 14, textAlign: 'center', marginTop: 12 },
+  status: { color: '#505050', fontSize: 14, textAlign: 'center', marginTop: 12 },
   error: { color: '#C93838', fontSize: 13 },
+  centered: { textAlign: 'center', marginTop: 12 },
   pressed: { opacity: 0.7 },
 });
