@@ -82,6 +82,7 @@ export default function TeamScreen() {
 
         {sections.map(({ role, label }, index) => {
           const members = teamMembers.filter((member) => member.role === role);
+          if (role === 'manager' && !members.length) return null; // only show Managers when there are some
           if (role === 'manager' && !members.length) return null; 
           return (
             <View key={role} style={[styles.section, index > 0 && styles.followingSection]}>

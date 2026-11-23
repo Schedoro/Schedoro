@@ -8,7 +8,7 @@ import { Icon, icons } from '@/components/schedule/icons';
 import { statusLabels } from '@/components/schedule/schedule-data';
 import { Body, Screen, ScreenHeader } from '@/components/schedule/ui';
 import { errorMessage, useJobs } from '@/context/jobs';
-import { useTeams } from '@/context/teams';
+import { useMembers } from '@/context/members';
 import { type Appointment, formatDate, formatDuration, formatTime, useAppointmentApi } from '@/lib/appointment-api';
  
 export default function AppointmentDetailsScreen() {
@@ -16,7 +16,7 @@ export default function AppointmentDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getAppointment } = useAppointmentApi();
   const { jobs } = useJobs();
-  const { selectedTeam } = useTeams();
+  const { members } = useMembers();
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [error, setError] = useState<string | null>(null);
  
@@ -41,7 +41,7 @@ export default function AppointmentDetailsScreen() {
   }
  
   const job = jobs.find((j) => j.id === appt.jobId);
-  const names = (selectedTeam?.members ?? []).filter((m) => appt.assigneeIds.includes(m.id)).map((m) => m.fullName);
+  const names = members.filter((m) => appt.assigneeIds.includes(m.id)).map((m) => m.fullName || m.email);
  
   return (
     <Screen>

@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
  
 import { Fonts } from '@/constants/fonts';
 import { errorMessage } from '@/context/jobs';
-import { useTeams } from '@/context/teams';
+import { useMembers } from '@/context/members';
 import { type UtilizationMetric, useAnalyticsApi } from '@/lib/analytics-api';
 import { toDateString } from '@/lib/appointment-api';
  
@@ -58,7 +58,7 @@ function thisWeek() {
  
 export default function AnalyticsScreen() {
   const { getUtilization } = useAnalyticsApi();
-  const { selectedTeam } = useTeams();
+  const { members } = useMembers();
   const [utilization, setUtilization] = useState<UtilizationMetric[] | null>(null);
   const [error, setError] = useState<string | null>(null);
  
@@ -76,7 +76,7 @@ export default function AnalyticsScreen() {
   );
  
   const nameOf = (m: UtilizationMetric) =>
-    selectedTeam?.members.find((member) => member.id === m.teamMemberId)?.fullName ?? m.name;
+    members.find((member) => member.id === m.teamMemberId)?.fullName || m.name;
   const average = utilization?.length
     ? Math.round(utilization.reduce((sum, m) => sum + m.utilizationPercent, 0) / utilization.length)
     : null;

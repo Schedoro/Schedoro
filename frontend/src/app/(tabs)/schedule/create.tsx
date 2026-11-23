@@ -7,7 +7,7 @@ import { icons } from '@/components/schedule/icons';
 import { Body, Button, Checkbox, Field, InputBox, Screen, ScreenHeader, SelectBox } from '@/components/schedule/ui';
 import { Text } from '@/components/typography';
 import { errorMessage, useJobs } from '@/context/jobs';
-import { useTeams } from '@/context/teams';
+import { useMembers } from '@/context/members';
 import { toDateString, useAppointmentApi } from '@/lib/appointment-api';
  
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -17,8 +17,7 @@ export default function CreateAppointmentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string }>();
   const { jobs } = useJobs();
-  const { selectedTeam } = useTeams();
-  const members = selectedTeam?.members ?? [];
+  const { members } = useMembers();
   const { createAppointment } = useAppointmentApi();
  
   const [jobId, setJobId] = useState<string>();
@@ -32,7 +31,7 @@ export default function CreateAppointmentScreen() {
   const [error, setError] = useState<string | null>(null);
  
   const job = jobs.find((j) => j.id === jobId);
-  const workerNames = members.filter((m) => workerIds.includes(m.id)).map((m) => m.fullName);
+  const workerNames = members.filter((m) => workerIds.includes(m.id)).map((m) => m.fullName || m.email);
  
   const toggleWorker = (id: string) =>
     setWorkerIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
@@ -104,11 +103,11 @@ export default function CreateAppointmentScreen() {
         <JobSelectionSheet title="Select job" onClose={() => setSheet(null)}>
           {jobs.length === 0 ? <Text style={styles.empty}>No jobs yet. Add one in the Jobs tab first.</Text> : null}
           {jobs.map((j) => (
-            <PickRow
+            <JobOption
               key={j.id}
-              checked={j.id === jobId}
+              selected={j.id === jobId}
               title={j.title}
-              subtitle={`${j.duration} ⋅ ${j.category}`}
+              subtitle={[j.duration, j.location].filter(Boolean).join(' ⋅ ')}
               onPress={() => {
                 setJobId(j.id);
                 setSheet(null);
@@ -124,7 +123,7 @@ export default function CreateAppointmentScreen() {
             <PickRow
               key={m.id}
               checked={workerIds.includes(m.id)}
-              title={m.fullName}
+              title={m.fullName || m.email}
               subtitle={`${m.role} ⋅ ${m.skills.join(', ')}`}
               onPress={() => toggleWorker(m.id)}
             />
@@ -135,6 +134,24 @@ export default function CreateAppointmentScreen() {
   );
 }
  
+// one job per appointment, so this looks like the app's other single-choice pickers
+// (bordered option, purple when picked) instead of the worker checkboxes
+function JobOption({ selected, title, subtitle, onPress }: { selected: boolean; title: string; subtitle: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.option, selected && styles.optionSelected, pressed && styles.pressed]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.pickTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.pickSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
+      </View>
+      <Text aria-hidden style={styles.check}>{selected ? '✓' : ''}</Text>
+    </Pressable>
+  );
+}
+
 function PickRow({ checked, title, subtitle, onPress }: { checked: boolean; title: string; subtitle: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={styles.pick}>
@@ -155,5 +172,10 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   pickTitle: { fontSize: 16, color: '#000000' },
   pickSubtitle: { fontSize: 14, color: 'rgba(0,0,0,0.4)' },
+  // same as the options in components/job-selection-sheet.tsx
+  option: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5E5' },
+  optionSelected: { borderColor: '#5E5EFD', backgroundColor: '#F5F5FF' },
+  check: { width: 20, color: '#5E5EFD', fontSize: 18 },
+  pressed: { opacity: 0.7 },
 });
  
